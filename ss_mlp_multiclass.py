@@ -1,4 +1,4 @@
-# Implements a self-selecting multilayer perceptron for binary classification
+# Implements a self-selecting multilayer perceptron for multiclass classification
 # Notation used mostly follows Andrew Ng's deeplearning.ai course
 # Author: Ryan Kingery (rkinger@g.clemson.edu)
 # Last Updated: April 2018
@@ -10,19 +10,21 @@
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
+from scipy.special import logsumexp
 np.random.seed(42)
 
-def sigmoid(Z):
+def softmax(Z):
     """
-    Implements the sigmoid function a = 1/(1+exp(-z))
+    Numerically stable implementation of the softmax function a = exp(z)/(sum(exp(z)))
     
     Arguments:
     Z -- numpy array of any shape
     
     Returns:
-    output of sigmoid(z) function, same shape as Z
+    output of softmax(z) function, same shape as Z
     """   
-    return 1./(1+np.exp(-Z))
+    logA = Z - logsumexp(Z,axis=0).reshape(1,Z.shape[1])
+    return np.exp(logA)
 
 def relu(Z):
     """
@@ -88,7 +90,8 @@ def forwardprop(X, parameters):
     W = parameters['W'+str(L)]
     b = parameters['b'+str(L)]
     Z = W.dot(A_prev) + b
-    A = sigmoid(Z)
+    A = softmax(Z)
+    A = np.clip(A,1e-8,1.-1e-8)     # clip to prevent loss from blowing up
     inputs['Z'+str(L)] = Z
     inputs['A'+str(L)] = A
     yhat = A
@@ -106,7 +109,7 @@ def compute_loss(yhat, y):
     loss -- cross-entropy loss
     """   
     m = y.shape[1]
-    loss = 1./m*(-np.dot(y,np.log(yhat).T) - np.dot(1-y, np.log(1-yhat).T))    
+    loss = -1./m*np.sum(np.sum(y*np.log(yhat),axis=0))
     loss = np.squeeze(loss)      # turns [[17]] into 17).    
     return loss
 
@@ -130,14 +133,11 @@ def backprop(yhat, y, inputs, parameters):
     L = len(parameters) // 2
     y = y.reshape(yhat.shape)
     
-    dyhat = - (np.divide(y,yhat) - np.divide(1-y, 1-yhat))
-    
-    Z = inputs['Z'+str(L)]
     A_prev = inputs['A'+str(L-1)]
     W = parameters['W'+str(L)]
     m = A_prev.shape[1]
     
-    dZ = dyhat*sigmoid(Z)*(1-sigmoid(Z))
+    dZ = yhat-y
     dA_prev = np.dot(W.T,dZ)
     dW = 1./m*np.dot(dZ,A_prev.T)
     db = 1./m*np.sum(dZ,axis=1,keepdims=True)
@@ -296,13 +296,14 @@ def MLP(X, y, layers_dims, lr=0.01, num_iters=1000, print_loss=True, print_add_d
         parameters = gradient_descent(parameters, grads, lr)
         
         # Add / delete neurons
-        parameters = add_del_neurons(parameters,print_add_del)
+        parameters = add_del_neurons(parameters, print_add_del)
                 
         # Print the cost every 100 training example
         if print_loss and i % 100 == 0:
             print('Loss after iteration %i: %f' % (i, loss))
-        if print_loss and i % 100 == 0:
             losses.append(loss)
+            if i>0 and i%1000 == 0:
+                lr = lr/(1+0.0*i)
             
     # plot the cost
     if print_loss:
@@ -325,14 +326,12 @@ def predict(X, y, parameters):
     Returns:
     preds -- predictioned binary labels for dataset X
     """   
-    m = X.shape[1]
-    preds = np.zeros((1,m))
+    preds = np.zeros(y.shape)
     yhat,inputs = forwardprop(X, parameters)
-    for i in range(0, yhat.shape[1]):
-        if yhat[0,i] > 0.5:
-            preds[0,i] = 1
-        else:
-            preds[0,i] = 0       
+    max_idxs = np.argmax(yhat, axis=0)
+    for i in range(y.shape[1]):
+        imax = max_idxs[i]
+        preds[imax,i] = 1.
     return preds
 
 def score(X, y, parameters):
@@ -348,20 +347,22 @@ def score(X, y, parameters):
     acc -- num correctly predict labels / num total labels
     """  
     m = X.shape[1]
-    preds = predict(X,y,parameters)
-    acc = np.sum((preds == y)*1./m)
+    yhat,inputs = forwardprop(X, parameters)
+    acc = 1.*np.count_nonzero(np.argmax(yhat, axis=0) == np.argmax(y, axis=0))/m
     return acc
 
 
 if __name__ == '__main__':
-    data_size = 1000
+    data_size = 7
     num_features = 10
+    num_classes = 3
     
-    X = np.random.rand(num_features,data_size)
-    y = np.random.randint(0,2,data_size).reshape(1,data_size)
+    X = 10.*np.random.rand(num_features,data_size)
+    #y = np.random.randint(0,2,size=(num_classes,data_size))
+    y = np.array([[1,0,0],[0,1,0],[0,0,1],[1,0,0],[0,1,0],[0,0,1],[1,0,0]]).T
     
-    layers_dims = [X.shape[0], 10, 1]
-    parameters = MLP(X, y, layers_dims, num_iters=2000, print_loss=True, print_add_del=True)
+    layers_dims = [num_features, 100, num_classes]
+    parameters = MLP(X, y, layers_dims, num_iters=1000, lr=0.0001, print_loss=True, print_add_del=True)
     print 'accuracy = ',score(X,y,parameters)
 
 
