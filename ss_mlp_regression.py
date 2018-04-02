@@ -120,7 +120,8 @@ def backprop(yhat, y, inputs, parameters):
     
     return grads
 
-def MLP(X, y, layers_dims, lr=0.01, num_iters=1000, print_loss=False, print_add_del=False):
+def MLP(X, y, layers_dims, lr=0.01, num_iters=1000, print_loss=True, print_add_del=False,
+        del_threshold=0.05, prob_del=0.05, prob_add=0.05, max_hidden_size=1000, num_below_margin=1):
     """
     Implements a L-layer multilayer perceptron (MLP)
     
@@ -157,7 +158,8 @@ def MLP(X, y, layers_dims, lr=0.01, num_iters=1000, print_loss=False, print_add_
         parameters = gradient_descent(parameters, grads, lr)
         
         # Add / delete neurons
-        parameters = add_del_neurons(parameters, print_add_del, i)
+        parameters = add_del_neurons(parameters,print_add_del,i,del_threshold, 
+                                     prob_del,prob_add,max_hidden_size,num_below_margin)
                 
         # Print the cost every 100 training example
         if print_loss and i % 100 == 0:
@@ -221,7 +223,7 @@ if __name__ == '__main__':
     
     layers_dims = [X.shape[0],100, 1]
     parameters = MLP(X, y, layers_dims, num_iters=1000, lr=0.01, print_loss=True, print_add_del=True)
-    print 'R^2 = ',score(X,y,parameters)
+    print('R^2 = %.3f' % score(X,y,parameters))
     
     # checking model works
     yhat = predict(X,y,parameters)

@@ -10,7 +10,6 @@
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
-from scipy.special import logsumexp
 from utils import *
 np.random.seed(42)
 
@@ -118,7 +117,8 @@ def backprop(yhat, y, inputs, parameters):
     
     return grads
 
-def MLP(X, y, layers_dims, lr=0.01, num_iters=1000, print_loss=True, print_add_del=False):
+def MLP(X, y, layers_dims, lr=0.01, num_iters=1000, print_loss=True, print_add_del=False,
+        del_threshold=0.05, prob_del=0.05, prob_add=0.05, max_hidden_size=1000, num_below_margin=1):
     """
     Implements a L-layer multilayer perceptron (MLP)
     
@@ -155,7 +155,8 @@ def MLP(X, y, layers_dims, lr=0.01, num_iters=1000, print_loss=True, print_add_d
         parameters = gradient_descent(parameters, grads, lr)
         
         # Add / delete neurons
-        #parameters = add_del_neurons(parameters, print_add_del, i)
+        parameters = add_del_neurons(parameters,print_add_del,i,del_threshold, 
+                                     prob_del,prob_add,max_hidden_size,num_below_margin)
                 
         # Print the cost every 100 training example
         if print_loss and i % 100 == 0:
@@ -212,18 +213,49 @@ def score(X, y, parameters):
 
 
 if __name__ == '__main__':
-    data_size = 7
-    num_features = 10
-    num_classes = 3
-    
-    X = 10.*np.random.rand(num_features,data_size)
-    #y = np.random.randint(0,2,size=(num_classes,data_size))
-    y = np.array([[1,0,0],[0,1,0],[0,0,1],[1,0,0],[0,1,0],[0,0,1],[1,0,0]]).T
-    
-    layers_dims = [num_features, 100, num_classes]
-    parameters = MLP(X, y, layers_dims, num_iters=5000, lr=0.0001, print_loss=True, print_add_del=True)
-    print 'accuracy = ',score(X,y,parameters)
+#    data_size = 7
+#    num_features = 10
+#    num_classes = 3
+#    
+#    X = 10.*np.random.rand(num_features,data_size)
+#    y = np.array([[1,0,0],[0,1,0],[0,0,1],[1,0,0],[0,1,0],[0,0,1],[1,0,0]]).T
 
+    # load and preprocessing to get MNIST files in their standard format
+    # you should find another way to get MNIST data    
+    import cPickle
+    import gzip
+    
+    f = gzip.open('/Users/ryankingery/Code/Neural_Networks/data/mnist.pkl.gz','rb')
+    train, val, test = cPickle.load(f)
+    f.close()
+    
+    y1 = list(train[1])
+    y2 = list(val[1])
+    y3 = list(test[1])
+    X1 = list(train[0])
+    X2 = list(val[0])
+    X3 = list(test[0])
+    X = np.array(X1 + X2 + X3).T    
+    y_orig = np.array(y1 + y2 + y3)
+    
+    # one-hot encode the labels: i=0,...,9 --> [0,...,1,...,0]
+    y = pd.get_dummies(y_orig).values.T
+
+
+    num_samples = 300  # sample from first 1000 images (too slow otherwise)
+    X_train = X[:,:num_samples]
+    y_train = y[:,:num_samples]
+    
+    num_features = X_train.shape[0]
+    num_classes = y_train.shape[0]
+    layers_dims = [num_features, 1000, num_classes]
+    parameters = MLP(X_train,y_train, layers_dims, num_iters=1000, 
+                     lr=0.01, print_loss=True, print_add_del=True)
+    print('training accuracy = %.3f' % score(X_train,y_train,parameters))
+    
+    X_test = X[:,num_samples:2*num_samples]
+    y_test = y[:,num_samples:2*num_samples]
+    print('test accuracy = %.3f' % score(X_test,y_test,parameters))
 
 
 

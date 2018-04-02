@@ -4,31 +4,38 @@
 # Last Updated: April 2018
 # License: BSD 3 clause
 
+# Functions contained:
+#   add_del_neurons
+#   sigmoid
+#   relu
+#   softmax
+#   initialize_parameters
+#   gradient_descent
+
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 
 import numpy as np
 import pandas as pd
-from matplotlib import pyplot as plt
 from scipy.special import logsumexp
 np.random.seed(42)
 
-def add_del_neurons(parameters, print_add_del, itr, del_threshold=0.05, prob_del=0.05, 
-                    prob_add=0.05, max_hidden_size=300, num_below_margin=1):
+def add_del_neurons(parameters, print_add_del, itr, del_threshold, prob_del, 
+                    prob_add, max_hidden_size, num_below_margin):
     """
     Deletes and/or adds hidden layer neurons at the end of each epoch
     Arguments:
-        parameters --
-        print_add_del --
-        itr --
-        del_threshold --
-        prob_del --
-        prob_add --
-        max_hidden_size --
-        num_below_margin --
+        parameters -- dict of parameters (weights and biases)
+        print_add_del -- prints if neuron added/deleted if True (boolean)
+        itr -- iteration of training (positive int)
+        del_threshold -- threshold value determining neural deletion (>0)
+        prob_del -- probability of deleting neuron if below threshold (0,...,1)
+        prob_add -- probability of adding neuron at each iteration (0,...,1)
+        max_hidden_size -- preferred max size of hidden layer (>0)
+        num_below_margin -- number of below-threshold neurons not deleted (>0)
        
     Returns:
-        parameters --
+        parameters -- new dict of parameters with neurons added/deleted
     """
     assert len(parameters) == 2+2, \
     'self-selecting MLP only works with 1 hidden layer currently'
@@ -54,7 +61,7 @@ def add_del_neurons(parameters, print_add_del, itr, del_threshold=0.05, prob_del
                 selected[x] = True
     
     if print_add_del and np.sum(selected) < hidden_size:
-        print('neuron deleted at iteration '+str(itr))
+        print('neuron deleted at iteration %d' % itr)
             
     hidden_size = np.sum(selected)
     
@@ -79,7 +86,7 @@ def add_del_neurons(parameters, print_add_del, itr, del_threshold=0.05, prob_del
             
             # also need memory terms here if updating per mini-batch
             if print_add_del and Wxh.shape[0] > hidden_size:
-               print('neuron added at iteration '+str(itr))
+               print('neuron added at iteration %d' % itr)
             
             hidden_size += 1
           
