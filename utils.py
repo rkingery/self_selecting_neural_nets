@@ -186,3 +186,194 @@ def gradient_descent(parameters, grads, lr):
                 
     return parameters
 
+def random_mini_batches(X, y, batch_size, seed):
+    """
+    Creates a list of random minibatches from (X, y)
+    
+    Arguments:
+    X -- input data, of shape (num features, data size)
+    y -- true labels, of shape (num labels, data size)
+    batch_size -- size of the mini-batches, integer
+    
+    Returns:
+    mini_batches -- list of synchronous (mini_batch_X, mini_batch_y)
+    """
+    
+    np.random.seed(seed)
+    
+    m = X.shape[1]
+    k = y.shape[0]
+    mini_batches = []
+    
+    if batch_size == m:
+        mini_batches = [(X,y)]
+    else:
+        # Step 1: Shuffle (X, Y)
+        permutation = list(np.random.permutation(m))
+        shuffled_X = X[:, permutation]
+        shuffled_y = y[:, permutation].reshape((k,m))
+    
+        # Step 2: Partition (shuffled_X, shuffled_Y). Minus the end case.
+        num_complete_minibatches = int(np.floor(m*1./batch_size)) # number of batches in partition
+        for k in range(0, num_complete_minibatches):
+            mini_batch_X = shuffled_X[:, k * batch_size : (k+1) * batch_size]
+            mini_batch_y = shuffled_y[:, k * batch_size : (k+1) * batch_size]
+            mini_batch = (mini_batch_X, mini_batch_y)
+            mini_batches.append(mini_batch)
+        
+        # Handling the end case (last mini-batch < mini_batch_size)
+        if m % batch_size != 0:
+            mini_batch_X = shuffled_X[:, num_complete_minibatches * batch_size :]
+            mini_batch_y = shuffled_y[:, num_complete_minibatches * batch_size :]
+            mini_batch = (mini_batch_X, mini_batch_y)
+            mini_batches.append(mini_batch)
+    return mini_batches
+
+def initialize_momentum(parameters):
+    """
+    Initializes momentum as a dict:
+                - keys: "dW1", "db1", ..., "dWL", "dbL" 
+                - values: array of zeros, same size as parameters
+    Arguments:
+    parameters -- dict of parameters
+                    parameters['W' + str(l)] = Wl
+                    parameters['b' + str(l)] = bl
+    
+    Returns:
+    m -- dict of momentum values
+                    m['dW' + str(l)] = momentum of dWl
+                    m['db' + str(l)] = momentum of dbl
+    """
+    
+    L = len(parameters) // 2 # number of layers in the neural networks
+    m = {}
+
+    for l in range(L):
+        m['dW'+str(l+1)] = np.zeros(parameters['W'+str(l+1)].shape)
+        m['db'+str(l+1)] = np.zeros(parameters['b'+str(l+1)].shape)
+        
+    return m
+
+def momentum(parameters, grads, m, beta, lr):
+    """
+    Update parameters using Momentum
+    
+    Arguments:
+    parameters -- dict of parameters:
+                    parameters['W' + str(l)] = Wl
+                    parameters['b' + str(l)] = bl
+    grads -- dict of gradients for each parameter:
+                    grads['dW' + str(l)] = dWl
+                    grads['db' + str(l)] = dbl
+    m -- dict of current momentum values:
+                    m['dW' + str(l)] = ...
+                    m['db' + str(l)] = ...
+    beta -- the momentum hyperparameter, scalar
+    lr -- the learning rate, scalar
+    
+    Returns:
+    parameters -- dict of parameters 
+    m -- dict of momentum values
+    """
+
+    L = len(parameters) // 2 # number of layers in the neural network
+    
+    for l in range(L):
+        # compute momentum
+        m["dW" + str(l+1)] = beta*m["dW" + str(l+1)] + (1-beta)*grads['dW' + str(l+1)]
+        m["db" + str(l+1)] = beta*m["db" + str(l+1)] + (1-beta)*grads['db' + str(l+1)]
+        # update parameters
+        parameters["W" + str(l+1)] -= lr*m["dW" + str(l+1)]
+        parameters["b" + str(l+1)] -= lr*m["db" + str(l+1)]
+        
+    return parameters, m
+
+def initialize_adam(parameters) :
+    """
+    Initializes m and v as two python dictionaries with:
+                - keys: "dW1", "db1", ..., "dWL", "dbL" 
+                - values: numpy arrays of zeros of the same shape as the corresponding gradients/parameters.
+    
+    Arguments:
+    parameters -- python dictionary containing your parameters.
+                    parameters["W" + str(l)] = Wl
+                    parameters["b" + str(l)] = bl
+    
+    Returns: 
+    m -- dict containing exponentially weighted average of the gradient.
+                    m["dW" + str(l)] = ...
+                    m["db" + str(l)] = ...
+    v -- dict containing exponentially weighted average of the squared gradient.
+                    v["dW" + str(l)] = ...
+                    v["db" + str(l)] = ...
+
+    """
+    
+    L = len(parameters) // 2 # number of layers in the neural network
+    m = {}
+    v = {}
+
+    for l in range(L):
+        m["dW" + str(l+1)] = np.zeros(parameters["W" + str(l+1)].shape)
+        m["db" + str(l+1)] = np.zeros(parameters["b" + str(l+1)].shape)
+        v["dW" + str(l+1)] = np.zeros(parameters["W" + str(l+1)].shape)
+        v["db" + str(l+1)] = np.zeros(parameters["b" + str(l+1)].shape)
+    
+    return m, v
+
+def adam(parameters, grads, m, v, t, lr, beta1, beta2, epsilon):
+    """
+    Update parameters using Adam
+    
+    Arguments:
+    parameters -- python dictionary containing your parameters:
+                    parameters['W' + str(l)] = Wl
+                    parameters['b' + str(l)] = bl
+    grads -- python dictionary containing your gradients for each parameters:
+                    grads['dW' + str(l)] = dWl
+                    grads['db' + str(l)] = dbl
+    m -- Adam variable, moving average of the first gradient, dict
+    v -- Adam variable, moving average of the squared gradient, dict
+    lr -- the learning rate, scalar
+    beta1 -- Exponential decay hyperparameter for the first moment estimates 
+    beta2 -- Exponential decay hyperparameter for the second moment estimates 
+    epsilon -- hyperparameter preventing division by zero in Adam updates
+
+    Returns:
+    parameters -- python dictionary containing your updated parameters 
+    m -- Adam variable, moving average of the first gradient, dict
+    v -- Adam variable, moving average of the squared gradient, dict
+    """
+    
+    L = len(parameters) // 2         # number of layers in the neural network
+    m_corrected = {}
+    v_corrected = {}
+    
+    for l in range(L):
+        # Moving average of the gradients
+        m["dW" + str(l+1)] = beta1*m["dW" + str(l+1)] + (1-beta1)*grads['dW' + str(l+1)]
+        m["db" + str(l+1)] = beta1*m["db" + str(l+1)] + (1-beta1)*grads['db' + str(l+1)]
+
+        # Compute bias-corrected first moment estimate
+        m_corrected["dW" + str(l+1)] = m["dW" + str(l+1)]#/(1-beta1**t)
+        m_corrected["db" + str(l+1)] = m["db" + str(l+1)]#/(1-beta1**t)
+
+        # Moving average of the squared gradients
+        v["dW" + str(l+1)] = beta2*v["dW" + str(l+1)] + (1-beta2)*np.power(grads['dW' + str(l+1)],2)
+        v["db" + str(l+1)] = beta2*v["db" + str(l+1)] + (1-beta2)*np.power(grads['db' + str(l+1)],2)
+
+        # Compute bias-corrected second raw moment estimate
+        v_corrected["dW" + str(l+1)] = v["dW" + str(l+1)]/(1-beta2**t)
+        v_corrected["db" + str(l+1)] = v["db" + str(l+1)]/(1-beta2**t)
+
+        # Update parameters
+        parameters["W" + str(l+1)] -= lr*np.divide(m_corrected["dW" + str(l+1)],
+                  np.sqrt(v_corrected["dW" + str(l+1)])+epsilon)
+        parameters["b" + str(l+1)] -= lr*np.divide(m_corrected["db" + str(l+1)],
+                  np.sqrt(v_corrected["db" + str(l+1)])+epsilon)
+
+    return parameters, m, v
+
+
+
+

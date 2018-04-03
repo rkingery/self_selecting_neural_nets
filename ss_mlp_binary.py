@@ -214,6 +214,94 @@ def score(X, y, parameters):
     acc = np.sum((preds == y)*1./m)
     return acc
 
+def StochasticMLP(X, y, layer_dims, optimizer='sgd', lr=0.0007, batch_size=64, 
+                  beta1=0.9, beta2=0.999, eps=1e-8, num_epochs=10000, print_loss=True):
+    """
+    MLP which can be run in different optimizer modes.
+    
+    Arguments:
+    X -- input data, of shape (num features, data size)
+    y -- true "label" vector, shape (num classes, data size)
+    layer_dims -- list, containing the size of each layer
+    lr -- the learning rate, scalar.
+    mini_batch_size -- the size of a mini batch
+    beta1 -- Exponential decay hyperparameter for the past gradients estimates 
+    beta2 -- Exponential decay hyperparameter for the past squared gradients estimates 
+    eps -- hyperparameter preventing division by zero in Adam updates
+    num_epochs -- number of epochs
+    print_loss -- True to print the loss every 1000 epochs
+
+    Returns:
+    parameters -- dict of parameters 
+    """
+
+    #L = len(layers_dims)             # number of layers in the neural network
+    if len(y.shape) == 1:
+        y = y.reshape(1,-1)
+    losses = []  
+    t = 0                            # counter required for Adam update
+    seed = 42
+    
+    # Initialize parameters
+    parameters = initialize_parameters(layer_dims)
+
+    # Initialize the optimizer
+    if optimizer == "sgd":
+        pass # no initialization required for gradient descent
+    elif optimizer == "momentum":
+        m = initialize_momentum(parameters)
+    elif optimizer == "adam":
+        m,v = initialize_adam(parameters)
+    
+    # Optimization loop
+    for i in range(num_epochs):        
+        # Define the random minibatches
+        seed += 1 # reshuffles the dataset differently after each epoch
+        minibatches = random_mini_batches(X, y, batch_size, seed)
+
+        for minibatch in minibatches:
+
+            # Select a minibatch
+            minibatch_X, minibatch_y = minibatch
+
+            # Forward propagation
+            yhat,inputs = forwardprop(minibatch_X, parameters)
+
+            # Compute cost
+            loss = compute_loss(yhat, minibatch_y)
+
+            # Backward propagation
+            grads = backprop(yhat, minibatch_y, inputs, parameters) 
+
+            # Update parameters
+            if optimizer == "sgd":
+                parameters = gradient_descent(parameters,grads,lr)
+            elif optimizer == "momentum":
+                parameters, m = momentum(parameters,grads,m,beta1,lr)
+            elif optimizer == "adam":
+                t = t + 1 # Adam counter
+                parameters, m, v = adam(parameters,grads,m,v,t,lr,beta1,beta2,eps)
+        
+        # Add / delete neurons
+        #parameters = add_del_neurons(parameters,print_add_del,i,del_threshold, 
+        #                             prob_del,prob_add,max_hidden_size,num_below_margin)
+        
+        # Print the cost every 1000 epoch
+        if print_loss and i % 100 == 0:
+            print ("Loss after epoch %i: %f" %(i, loss))
+        if print_loss:# and i % 100 == 0:
+            losses.append(loss)
+                
+    # plot the cost
+    plt.plot(losses)
+    plt.ylabel('loss')
+    plt.xlabel('epochs (per 100)')
+    plt.title('Training Loss')
+    plt.show()
+
+    return parameters
+
+
 
 if __name__ == '__main__':
     data_size = 1000
@@ -222,8 +310,11 @@ if __name__ == '__main__':
     X = np.random.rand(num_features,data_size)
     y = np.random.randint(0,2,data_size).reshape(1,data_size)
     
-    layers_dims = [X.shape[0], 100, 1]
-    parameters = MLP(X, y, layers_dims, num_iters=1000, print_loss=True, print_add_del=True)
+    layer_dims = [X.shape[0], 100, 1]
+    #parameters = MLP(X, y, layer_dims, num_iters=1000, print_loss=True, print_add_del=True)
+    
+    parameters = StochasticMLP(X, y, layer_dims, optimizer='adam', batch_size=128,
+                       num_epochs=500, print_loss=True)
     print('accuracy = %.3f' % score(X,y,parameters))
 
 

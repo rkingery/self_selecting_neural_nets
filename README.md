@@ -7,6 +7,7 @@ Authors:
   * Chidubem Arachie
   * Ali Talebzadeh
   * Ahmadreza Azizi
-  
+  * John Krulick
+
 Last Updated: April 2018
 
