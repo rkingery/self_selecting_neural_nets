@@ -121,7 +121,7 @@ def backprop(yhat, y, inputs, parameters):
     return grads
 
 def MLP(X, y, layers_dims, lr=0.01, num_iters=1000, print_loss=True, print_add_del=False,
-        del_threshold=0.05, prob_del=0.05, prob_add=0.05, max_hidden_size=1000, num_below_margin=1):
+        del_threshold=0.01, prob_del=0.05, prob_add=0.05, max_hidden_size=1000, num_below_margin=1):
     """
     Implements a L-layer multilayer perceptron (MLP)
     
@@ -158,8 +158,8 @@ def MLP(X, y, layers_dims, lr=0.01, num_iters=1000, print_loss=True, print_add_d
         parameters = gradient_descent(parameters, grads, lr)
         
         # Add / delete neurons
-        #parameters = add_del_neurons(parameters,print_add_del,i,del_threshold, 
-        #                             prob_del,prob_add,max_hidden_size,num_below_margin)
+        parameters = add_del_neurons(parameters,print_add_del,i,del_threshold, 
+                                     prob_del,prob_add,max_hidden_size,num_below_margin)
                 
         # Print the cost every 100 training example
         if print_loss and i % 100 == 0:
@@ -317,7 +317,7 @@ if __name__ == '__main__':
     # one-hot encode the labels y_orig: i=0,...,9 --> [0,...,1,...,0]
     y = pd.get_dummies(y_orig).values.astype(np.float32)
     
-    down_sample = 10000
+    down_sample = 5000
     X = X[:,:down_sample]
     y = y[:,:down_sample]
     
@@ -332,8 +332,8 @@ if __name__ == '__main__':
     layer_dims = [num_features, 100, num_classes]
     #parameters = MLP(X_train,y_train, layer_dims, num_iters=50, 
     #                 lr=0.0007, print_loss=True, print_add_del=True)
-    parameters,losses = StochasticMLP(X_train, y_train, layer_dims, optimizer='sgd', 
-                               batch_size=32, num_epochs=50, print_loss=True)   
+    parameters,losses = StochasticMLP(X_train, y_train, layer_dims, optimizer='adam', 
+                               batch_size=128, num_epochs=50, print_loss=True)   
     
     print('training accuracy = %.3f' % score(X_train,y_train,parameters))
     print('test accuracy = %.3f' % score(X_test,y_test,parameters))

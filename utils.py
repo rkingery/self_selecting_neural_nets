@@ -11,6 +11,9 @@
 #   softmax
 #   initialize_parameters
 #   gradient_descent
+#
+#
+#
 
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
@@ -78,7 +81,7 @@ def add_del_neurons(parameters, print_add_del, itr, del_threshold, prob_del,
             Wxh = np.append(Wxh, 0.01*np.random.randn(1,num_features), axis=0)
             
             new_Why = np.random.randn(num_labels,1)
-            new_Why = .5*del_threshold*new_Why / (1e-8 + np.sum(np.abs(new_Why))) #+ 0.05
+            new_Why = .5*del_threshold*new_Why / (1e-8 + np.sum(np.abs(new_Why))) + 0.05
             Why = np.append(Why, new_Why, axis=1)
             
             bh = np.append(bh, 0)
@@ -373,7 +376,5 @@ def adam(parameters, grads, m, v, t, lr, beta1, beta2, epsilon):
                   np.sqrt(v_corrected["db" + str(l+1)])+epsilon)
 
     return parameters, m, v
-
-
 
 

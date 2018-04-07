@@ -121,7 +121,7 @@ def backprop(yhat, y, inputs, parameters):
     return grads
 
 def MLP(X, y, layers_dims, lr=0.01, num_iters=1000, print_loss=True, print_add_del=False,
-        del_threshold=0.05, prob_del=0.05, prob_add=0.05, max_hidden_size=1000, num_below_margin=1):
+        del_threshold=0.01, prob_del=0.05, prob_add=0.05, max_hidden_size=1000, num_below_margin=5):
     """
     Implements a L-layer multilayer perceptron (MLP)
     
@@ -309,10 +309,10 @@ if __name__ == '__main__':
     y = 10.*X[0,:]**2 - 3.
     y = y.reshape(1,data_size)
     
-    layer_dims = [X.shape[0],100, 1]
-    #parameters = MLP(X, y, layers_dims, num_iters=1000, lr=0.01, print_loss=True, print_add_del=True)
-    parameters = StochasticMLP(X, y, layer_dims, optimizer='adam', batch_size=128,
-                       lr=0.01,num_epochs=500, print_loss=True)
+    layer_dims = [X.shape[0],10, 1]
+    parameters = MLP(X, y, layer_dims, num_iters=5000, lr=0.1, print_loss=True, print_add_del=True)
+    #parameters = StochasticMLP(X, y, layer_dims, optimizer='adam', batch_size=128,
+    #                   lr=0.01,num_epochs=500, print_loss=True)
     print('R^2 = %.3f' % score(X,y,parameters))
     
     # checking model works
