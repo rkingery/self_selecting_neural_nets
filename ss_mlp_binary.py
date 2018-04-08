@@ -45,6 +45,7 @@ def forwardprop(X, parameters):
     b = parameters['b'+str(L)]
     Z = W.dot(A_prev) + b
     A = sigmoid(Z)
+    A = np.clip(A,1e-8,1.-1e-8)     # clip to prevent loss from blowing up
     inputs['Z'+str(L)] = Z
     inputs['A'+str(L)] = A
     yhat = A
@@ -311,7 +312,7 @@ def StochasticMLP(X, y, layer_dims, X_test=None, y_test=None, optimizer='sgd',
         # Print the cost every 1000 epoch
         if print_loss and i % 1000 == 0:
             print ("Training loss after epoch %i: %f" %(i, loss))
-            print ("Test loss after epoch %i: %f" %(i, loss))
+            print ("Test loss after epoch %i: %f" %(i, test_loss))
         if print_loss:# and i % 100 == 0:
             losses.append(loss)
             test_losses.append(test_loss)
@@ -362,8 +363,8 @@ if __name__ == '__main__':
     print('test accuracy = %.3f' % score(X_test,y_test,parameters))
 
     xx = np.arange(1,num_iters+1)
-    plt.plot(xx,ad_loss,color='blue',label='add/del')#,linestyle='none',marker='o')
-    plt.plot(xx,reg_loss,color='red',label='regular')#,linestyle='none',marker='o')
+    plt.plot(xx,ad_loss,color='blue',label='add/del')
+    plt.plot(xx,reg_loss,color='red',label='regular')
     plt.legend(loc='upper right')
     plt.xlabel('iteration')
     plt.ylabel('loss')

@@ -215,8 +215,11 @@ def score(X, y, parameters):
     acc = 1.*np.count_nonzero(np.argmax(yhat, axis=0) == np.argmax(y, axis=0))/m
     return acc
 
-def StochasticMLP(X, y, layer_dims, optimizer='sgd', lr=0.0007, batch_size=64, 
-                  beta1=0.9, beta2=0.999, eps=1e-8, num_epochs=10000, print_loss=True):
+def StochasticMLP(X, y, layer_dims, X_test=None, y_test=None, optimizer='sgd', 
+                  lr=0.0007, batch_size=64, beta1=0.9, beta2=0.999, eps=1e-8, 
+                  num_epochs=10000, print_loss=True, add_del=False, print_add_del=False, 
+                  del_threshold=0.03, prob_del=1., prob_add=1., max_hidden_size=300, 
+                  num_below_margin=5):
     """
     MLP which can be run in different optimizer modes.
     
@@ -230,16 +233,18 @@ def StochasticMLP(X, y, layer_dims, optimizer='sgd', lr=0.0007, batch_size=64,
     beta2 -- Exponential decay hyperparameter for the past squared gradients estimates 
     eps -- hyperparameter preventing division by zero in Adam updates
     num_epochs -- number of epochs
-    print_loss -- True to print the loss every few epochs
+    print_loss -- True to print the loss every 1000 epochs
 
     Returns:
     parameters -- dict of parameters 
     """
-
+    #X = X.T
+    #y = y.T
     #L = len(layers_dims)             # number of layers in the neural network
     if len(y.shape) == 1:
         y = y.reshape(1,-1)
-    losses = []  
+    losses = []
+    test_losses = []
     t = 0                            # counter required for Adam update
     seed = 42
     
@@ -259,6 +264,7 @@ def StochasticMLP(X, y, layer_dims, optimizer='sgd', lr=0.0007, batch_size=64,
         # Define the random minibatches
         seed += 1 # reshuffles the dataset differently after each epoch
         minibatches = random_mini_batches(X, y, batch_size, seed)
+
         for minibatch in minibatches:
 
             # Select a minibatch
@@ -281,27 +287,43 @@ def StochasticMLP(X, y, layer_dims, optimizer='sgd', lr=0.0007, batch_size=64,
             elif optimizer == "adam":
                 t = t + 1 # Adam counter
                 parameters, m, v = adam(parameters,grads,m,v,t,lr,beta1,beta2,eps)
+                
+        if X_test is not None and y_test is not None:
+            minibatches = random_mini_batches(X_test, y_test, batch_size, seed)
+            for minibatch in minibatches:
+
+                # Select a minibatch
+                minibatch_X, minibatch_y = minibatch
+    
+                # Forward propagation
+                yhat,inputs = forwardprop(minibatch_X, parameters)
+    
+                # Compute cost
+                test_loss = compute_loss(yhat, minibatch_y)
         
         # Add / delete neurons
-        #parameters = add_del_neurons(parameters,print_add_del,i,del_threshold, 
-        #                             prob_del,prob_add,max_hidden_size,num_below_margin)
+        if add_del:
+            parameters = add_del_neurons(parameters,print_add_del,i,del_threshold, 
+                                         prob_del,prob_add,max_hidden_size,num_below_margin)
         
         # Print the cost every 1000 epoch
         if print_loss and i % 10 == 0:
-            print ("Loss after epoch %i: %f" %(i, loss))
-        losses.append(loss)
-        if i>0 and i%50 == 0:
-            lr = lr/(1+0.0*i)
-            print('learning rate reduced to %d' % lr)
+            print ("Training loss after epoch %i: %f" %(i, loss))
+            print ("Test loss after epoch %i: %f" %(i, test_loss))
+        if print_loss:# and i % 100 == 0:
+            losses.append(loss)
+            test_losses.append(test_loss)
                 
     # plot the cost
-    plt.plot(losses)
+    plt.plot(losses,color='blue',label='train')
+    plt.plot(test_losses,color='red',label='test')
+    plt.legend(loc='upper right')
     plt.ylabel('loss')
-    plt.xlabel('epochs (per 100)')
+    plt.xlabel('epochs')
     plt.title('Training Loss')
     plt.show()
 
-    return parameters,losses
+    return parameters,losses, test_losses
 
 if __name__ == '__main__':
 #    data_size = 7
@@ -327,16 +349,37 @@ if __name__ == '__main__':
     X_test = X_test.T
     y_test = y_test.T
     
+    num_iters = 1000
+    lr = 0.01
     num_features = X_train.shape[0]
     num_classes = y_train.shape[0]
-    layer_dims = [num_features, 100, num_classes]
+    layer_dims = [num_features, 10, num_classes]
     #parameters = MLP(X_train,y_train, layer_dims, num_iters=50, 
     #                 lr=0.0007, print_loss=True, print_add_del=True)
-    parameters,losses = StochasticMLP(X_train, y_train, layer_dims, optimizer='adam', 
-                               batch_size=128, num_epochs=50, print_loss=True)   
-    
-    print('training accuracy = %.3f' % score(X_train,y_train,parameters))
+#    parameters,losses = StochasticMLP(X_train, y_train, layer_dims, optimizer='adam', 
+#                               batch_size=128, num_epochs=50, print_loss=True)   
+#    
+#    print('training accuracy = %.3f' % score(X_train,y_train,parameters))
+#    print('test accuracy = %.3f' % score(X_test,y_test,parameters))
+    parameters,_,reg_loss = StochasticMLP(X_train, y_train, layer_dims, X_test=X_test, y_test=y_test, 
+                                        num_epochs=num_iters, lr=lr, add_del=False, optimizer='sgd', 
+                                        batch_size=128, print_loss=True, print_add_del=False)
+    print('train accuracy = %.3f' % score(X_train,y_train,parameters))
     print('test accuracy = %.3f' % score(X_test,y_test,parameters))
+    parameters,_,ad_loss = StochasticMLP(X_train, y_train, layer_dims, X_test=X_test, y_test=y_test, 
+                                       num_epochs=num_iters, lr=lr, add_del=True, optimizer='sgd', 
+                                       batch_size=128, print_loss=True, print_add_del=False)
+    print('train accuracy = %.3f' % score(X_train,y_train,parameters))
+    print('test accuracy = %.3f' % score(X_test,y_test,parameters))
+
+    xx = np.arange(1,num_iters+1)
+    plt.plot(xx,ad_loss,color='blue',label='add/del')
+    plt.plot(xx,reg_loss,color='red',label='regular')
+    plt.legend(loc='upper right')
+    plt.xlabel('iteration')
+    plt.ylabel('loss')
+    plt.title('Test Loss')
+    plt.show()
 
 
 

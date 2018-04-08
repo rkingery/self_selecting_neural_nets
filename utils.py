@@ -7,13 +7,16 @@
 # Functions contained:
 #   add_del_neurons
 #   sigmoid
+#   tanh
 #   relu
 #   softmax
 #   initialize_parameters
 #   gradient_descent
-#
-#
-#
+#   random_mini_batches
+#   initialize_momentum
+#   momentum
+#   initialize_adam
+#   adam
 
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
@@ -111,22 +114,33 @@ def sigmoid(Z):
     """   
     return 1./(1+np.exp(-Z))
 
+def tanh(Z):
+    """
+    Implements the hyperbolic tangent function a = tanh(z)
+    
+    Arguments:
+    Z -- numpy array of any shape
+    
+    Returns:
+    output of tanh(z) function, same shape as Z
+    """   
+    return np.tanh(Z)
+
 def relu(Z):
     """
-    Implements the RELU function a=max(0,z)
+    Implements the RELU function a = max(0,z)
 
     Arguments:
     Z -- Output of the linear layer, of any shape
 
     Returns:
     A -- output of relu(Z) function, same shape as Z
-    """    
-    A = np.maximum(0,Z)    
-    return A
+    """        
+    return np.maximum(0.,Z)
 
 def softmax(Z):
     """
-    Numerically stable implementation of the softmax function a = exp(z)/(sum(exp(z)))
+    Numerically stable implementation of the softmax function a = exp(z)/sum(exp(z))
     
     Arguments:
     Z -- numpy array of any shape
