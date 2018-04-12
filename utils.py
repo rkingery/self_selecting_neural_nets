@@ -17,6 +17,10 @@
 #   momentum
 #   initialize_adam
 #   adam
+#   MLP
+#   StochasticMLP
+#   _predict
+#   _score
 
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
@@ -165,232 +169,13 @@ def initialize_parameters(layer_dims):
     
     np.random.seed(1)
     parameters = {}
-    L = len(layer_dims)            # number of layers in the network
-    for l in range(1, L):
+    L = len(layer_dims)-1            # number of layers in the network
+    for l in range(1, L+1):
         # using He initialization
         parameters['W'+str(l)] = np.random.randn(layer_dims[l], layer_dims[l-1]) * \
                                    np.sqrt(2. / layer_dims[l - 1])
         parameters['b'+str(l)] = np.zeros((layer_dims[l], 1))        
     return parameters
-
-def gradient_descent(parameters, grads, lr):
-    """
-    Update parameters using gradient descent
-    
-    Arguments:
-    parameters -- dict containing network parameters 
-    grads -- dict containing gradients backprop
-    lr -- learning rate for gradient descent (default=0.001)
-    
-    Returns:
-    parameters -- python dictionary containing your updated parameters 
-                  parameters["W" + str(l)] = Wl 
-                  parameters["b" + str(l)] = bl
-    """
-
-    L = len(parameters) // 2 # number of layers in the neural network
-
-    for l in range(L):
-        W = parameters['W' + str(l+1)]
-        dW = grads['dW' + str(l+1)]
-        b = parameters['b' + str(l+1)]
-        db = grads['db' + str(l+1)]
-        
-        W = W - lr * dW        
-        b = b - lr * db
-        
-        parameters['W' + str(l+1)] = W
-        parameters['b' + str(l+1)] = b
-                
-    return parameters
-
-def random_mini_batches(X, y, batch_size, seed):
-    """
-    Creates a list of random minibatches from (X, y)
-    
-    Arguments:
-    X -- input data, of shape (num features, data size)
-    y -- true labels, of shape (num labels, data size)
-    batch_size -- size of the mini-batches, integer
-    
-    Returns:
-    mini_batches -- list of synchronous (mini_batch_X, mini_batch_y)
-    """
-    
-    np.random.seed(seed)
-    
-    m = X.shape[1]
-    k = y.shape[0]
-    mini_batches = []
-    
-    if batch_size >= m:
-        mini_batches = [(X,y)]
-    else:
-        # Step 1: Shuffle (X, Y)
-        permutation = list(np.random.permutation(m))
-        shuffled_X = X[:, permutation]
-        shuffled_y = y[:, permutation].reshape((k,m))
-    
-        # Step 2: Partition (shuffled_X, shuffled_Y). Minus the end case.
-        num_complete_minibatches = int(np.floor(m*1./batch_size)) # number of batches in partition
-        for k in range(0, num_complete_minibatches):
-            mini_batch_X = shuffled_X[:, k * batch_size : (k+1) * batch_size]
-            mini_batch_y = shuffled_y[:, k * batch_size : (k+1) * batch_size]
-            mini_batch = (mini_batch_X, mini_batch_y)
-            mini_batches.append(mini_batch)
-        
-        # Handling the end case (last mini-batch < mini_batch_size)
-        if m % batch_size != 0:
-            mini_batch_X = shuffled_X[:, num_complete_minibatches * batch_size :]
-            mini_batch_y = shuffled_y[:, num_complete_minibatches * batch_size :]
-            mini_batch = (mini_batch_X, mini_batch_y)
-            mini_batches.append(mini_batch)
-    return mini_batches
-
-def initialize_momentum(parameters):
-    """
-    Initializes momentum as a dict:
-                - keys: "dW1", "db1", ..., "dWL", "dbL" 
-                - values: array of zeros, same size as parameters
-    Arguments:
-    parameters -- dict of parameters
-                    parameters['W' + str(l)] = Wl
-                    parameters['b' + str(l)] = bl
-    
-    Returns:
-    m -- dict of momentum values
-                    m['dW' + str(l)] = momentum of dWl
-                    m['db' + str(l)] = momentum of dbl
-    """
-    
-    L = len(parameters) // 2 # number of layers in the neural networks
-    m = {}
-
-    for l in range(L):
-        m['dW'+str(l+1)] = np.zeros(parameters['W'+str(l+1)].shape)
-        m['db'+str(l+1)] = np.zeros(parameters['b'+str(l+1)].shape)
-        
-    return m
-
-def momentum(parameters, grads, m, beta, lr):
-    """
-    Update parameters using Momentum
-    
-    Arguments:
-    parameters -- dict of parameters:
-                    parameters['W' + str(l)] = Wl
-                    parameters['b' + str(l)] = bl
-    grads -- dict of gradients for each parameter:
-                    grads['dW' + str(l)] = dWl
-                    grads['db' + str(l)] = dbl
-    m -- dict of current momentum values:
-                    m['dW' + str(l)] = ...
-                    m['db' + str(l)] = ...
-    beta -- the momentum hyperparameter, scalar
-    lr -- the learning rate, scalar
-    
-    Returns:
-    parameters -- dict of parameters 
-    m -- dict of momentum values
-    """
-
-    L = len(parameters) // 2 # number of layers in the neural network
-    
-    for l in range(L):
-        # compute momentum
-        m["dW" + str(l+1)] = beta*m["dW" + str(l+1)] + (1-beta)*grads['dW' + str(l+1)]
-        m["db" + str(l+1)] = beta*m["db" + str(l+1)] + (1-beta)*grads['db' + str(l+1)]
-        # update parameters
-        parameters["W" + str(l+1)] -= lr*m["dW" + str(l+1)]
-        parameters["b" + str(l+1)] -= lr*m["db" + str(l+1)]
-        
-    return parameters, m
-
-def initialize_adam(parameters) :
-    """
-    Initializes m and v as two python dictionaries with:
-                - keys: "dW1", "db1", ..., "dWL", "dbL" 
-                - values: numpy arrays of zeros of the same shape as the corresponding gradients/parameters.
-    
-    Arguments:
-    parameters -- python dictionary containing your parameters.
-                    parameters["W" + str(l)] = Wl
-                    parameters["b" + str(l)] = bl
-    
-    Returns: 
-    m -- dict containing exponentially weighted average of the gradient.
-                    m["dW" + str(l)] = ...
-                    m["db" + str(l)] = ...
-    v -- dict containing exponentially weighted average of the squared gradient.
-                    v["dW" + str(l)] = ...
-                    v["db" + str(l)] = ...
-
-    """
-    
-    L = len(parameters) // 2 # number of layers in the neural network
-    m = {}
-    v = {}
-
-    for l in range(L):
-        m["dW" + str(l+1)] = np.zeros(parameters["W" + str(l+1)].shape)
-        m["db" + str(l+1)] = np.zeros(parameters["b" + str(l+1)].shape)
-        v["dW" + str(l+1)] = np.zeros(parameters["W" + str(l+1)].shape)
-        v["db" + str(l+1)] = np.zeros(parameters["b" + str(l+1)].shape)
-    
-    return m, v
-
-def adam(parameters, grads, m, v, t, lr, beta1, beta2, epsilon):
-    """
-    Update parameters using Adam
-    
-    Arguments:
-    parameters -- python dictionary containing your parameters:
-                    parameters['W' + str(l)] = Wl
-                    parameters['b' + str(l)] = bl
-    grads -- python dictionary containing your gradients for each parameters:
-                    grads['dW' + str(l)] = dWl
-                    grads['db' + str(l)] = dbl
-    m -- Adam variable, moving average of the first gradient, dict
-    v -- Adam variable, moving average of the squared gradient, dict
-    lr -- the learning rate, scalar
-    beta1 -- Exponential decay hyperparameter for the first moment estimates 
-    beta2 -- Exponential decay hyperparameter for the second moment estimates 
-    epsilon -- hyperparameter preventing division by zero in Adam updates
-
-    Returns:
-    parameters -- python dictionary containing your updated parameters 
-    m -- Adam variable, moving average of the first gradient, dict
-    v -- Adam variable, moving average of the squared gradient, dict
-    """
-    
-    L = len(parameters) // 2         # number of layers in the neural network
-    m_corrected = {}
-    v_corrected = {}
-    
-    for l in range(L):
-        # Moving average of the gradients
-        m["dW" + str(l+1)] = beta1*m["dW" + str(l+1)] + (1-beta1)*grads['dW' + str(l+1)]
-        m["db" + str(l+1)] = beta1*m["db" + str(l+1)] + (1-beta1)*grads['db' + str(l+1)]
-
-        # Compute bias-corrected first moment estimate
-        m_corrected["dW" + str(l+1)] = m["dW" + str(l+1)]#/(1-beta1**t)
-        m_corrected["db" + str(l+1)] = m["db" + str(l+1)]#/(1-beta1**t)
-
-        # Moving average of the squared gradients
-        v["dW" + str(l+1)] = beta2*v["dW" + str(l+1)] + (1-beta2)*np.power(grads['dW' + str(l+1)],2)
-        v["db" + str(l+1)] = beta2*v["db" + str(l+1)] + (1-beta2)*np.power(grads['db' + str(l+1)],2)
-
-        # Compute bias-corrected second raw moment estimate
-        v_corrected["dW" + str(l+1)] = v["dW" + str(l+1)]/(1-beta2**t)
-        v_corrected["db" + str(l+1)] = v["db" + str(l+1)]/(1-beta2**t)
-
-        # Update parameters
-        parameters["W" + str(l+1)] -= lr*np.divide(m_corrected["dW" + str(l+1)],
-                  np.sqrt(v_corrected["dW" + str(l+1)])+epsilon)
-        parameters["b" + str(l+1)] -= lr*np.divide(m_corrected["db" + str(l+1)],
-                  np.sqrt(v_corrected["db" + str(l+1)])+epsilon)
-
-    return parameters, m, v
 
 def forwardprop(X, parameters, problem_type):
     """
@@ -437,7 +222,14 @@ def forwardprop(X, parameters, problem_type):
     yhat = A
     return yhat,inputs
 
-def compute_loss(yhat, y, problem_type):
+def flatten_weights(parameters):
+    L = len(parameters) // 2
+    w = np.array([])
+    for l in range(1,L+1):
+        w = np.append(w,parameters['W'+str(l)].flatten())
+    return w
+
+def compute_loss(yhat, y, parameters, reg_param, problem_type):
     """
     Compute average loss over dataset
 
@@ -451,13 +243,19 @@ def compute_loss(yhat, y, problem_type):
     loss -- cross-entropy loss
     """   
     m = y.shape[1]
+    # calculate base loss
     if problem_type == 'regression':
         loss = 1./(2*m)*np.sum((y-yhat)**2)
     elif problem_type == 'binary':
-        loss = 1./m*(-np.dot(y,np.log(yhat).T) - np.dot(1-y, np.log(1-yhat).T))
+        loss = 1./m*(-np.dot(y,np.log(yhat).T)-np.dot(1-y, np.log(1-yhat).T))
     elif problem_type == 'multiclass':
         loss = -1./m*np.sum(np.sum(y*np.log(yhat),axis=0))
-    loss = np.squeeze(loss)      # turns [[17]] into 17).    
+    loss = np.squeeze(loss)      # turns [[17]] into 17).
+    
+    # add L1 regularization term
+    w = flatten_weights(parameters)
+    #loss += 1./m*reg_param*np.sum(np.abs(w))
+    
     return loss
 
 def backprop(yhat, y, inputs, parameters, problem_type):
@@ -525,8 +323,221 @@ def backprop(yhat, y, inputs, parameters, problem_type):
     
     return grads
 
-def MLP(X, y, layers_dims, problem_type, lr, num_iters, print_loss, add_del, 
-        print_add_del,del_threshold, prob_del, prob_add, max_hidden_size, num_below_margin):
+def gradient_descent(parameters, grads, lr, reg_param, data_size):
+    """
+    Update parameters using gradient descent
+    
+    Arguments:
+    parameters -- dict containing network parameters 
+    grads -- dict containing gradients backprop
+    lr -- learning rate for gradient descent (default=0.001)
+    
+    Returns:
+    parameters -- python dictionary containing your updated parameters 
+                  parameters["W" + str(l)] = Wl 
+                  parameters["b" + str(l)] = bl
+    """
+
+    L = len(parameters) // 2 # number of layers in the neural network
+    for l in range(L):        
+        parameters['W'+str(l+1)] -= lr*(grads['dW'+str(l+1)])# + 
+                  #(1./data_size)*reg_param*np.sign(parameters['W'+str(l+1)]))
+        parameters['b'+str(l+1)] -= lr*grads['db'+str(l+1)]                
+    return parameters
+
+def random_mini_batches(X, y, batch_size, seed):
+    """
+    Creates a list of random minibatches from (X, y)
+    
+    Arguments:
+    X -- input data, of shape (num features, data size)
+    y -- true labels, of shape (num labels, data size)
+    batch_size -- size of the mini-batches, integer
+    
+    Returns:
+    mini_batches -- list of synchronous (mini_batch_X, mini_batch_y)
+    """
+    
+    np.random.seed(seed)
+    
+    m = y.shape[1]
+    k = y.shape[0]
+    mini_batches = []
+    
+    #if batch_size >= m:
+    #    mini_batches = [(X,y)]
+    if True:#else:
+        # Step 1: Shuffle (X, Y)
+        permutation = list(np.random.permutation(m))
+        shuffled_X = X[:, permutation]
+        shuffled_y = y[:, permutation].reshape((k,m))
+    
+        # Step 2: Partition (shuffled_X, shuffled_Y). Minus the end case.
+        num_complete_minibatches = int(np.floor(m*1./batch_size)) # number of batches in partition
+        for k in range(0, num_complete_minibatches):
+            mini_batch_X = shuffled_X[:, k * batch_size : (k+1) * batch_size]
+            mini_batch_y = shuffled_y[:, k * batch_size : (k+1) * batch_size]
+            mini_batch = (mini_batch_X, mini_batch_y)
+            mini_batches.append(mini_batch)
+        
+        # Handling the end case (last mini-batch < mini_batch_size)
+        if m % batch_size != 0:
+            mini_batch_X = shuffled_X[:, num_complete_minibatches * batch_size :]
+            mini_batch_y = shuffled_y[:, num_complete_minibatches * batch_size :]
+            mini_batch = (mini_batch_X, mini_batch_y)
+            mini_batches.append(mini_batch)
+    return mini_batches
+
+def initialize_momentum(parameters):
+    """
+    Initializes momentum as a dict:
+                - keys: "dW1", "db1", ..., "dWL", "dbL" 
+                - values: array of zeros, same size as parameters
+    Arguments:
+    parameters -- dict of parameters
+                    parameters['W' + str(l)] = Wl
+                    parameters['b' + str(l)] = bl
+    
+    Returns:
+    m -- dict of momentum values
+                    m['dW' + str(l)] = momentum of dWl
+                    m['db' + str(l)] = momentum of dbl
+    """
+    
+    L = len(parameters) // 2 # number of layers in the neural networks
+    m = {}
+
+    for l in range(L):
+        m['dW'+str(l+1)] = np.zeros(parameters['W'+str(l+1)].shape)
+        m['db'+str(l+1)] = np.zeros(parameters['b'+str(l+1)].shape)
+        
+    return m
+
+def momentum(parameters, grads, m, beta, lr, reg_param, data_size):
+    """
+    Update parameters using Momentum
+    
+    Arguments:
+    parameters -- dict of parameters:
+                    parameters['W' + str(l)] = Wl
+                    parameters['b' + str(l)] = bl
+    grads -- dict of gradients for each parameter:
+                    grads['dW' + str(l)] = dWl
+                    grads['db' + str(l)] = dbl
+    m -- dict of current momentum values:
+                    m['dW' + str(l)] = ...
+                    m['db' + str(l)] = ...
+    beta -- the momentum hyperparameter, scalar
+    lr -- the learning rate, scalar
+    
+    Returns:
+    parameters -- dict of parameters 
+    m -- dict of momentum values
+    """
+
+    L = len(parameters) // 2 # number of layers in the neural network
+    
+    for l in range(L):
+        # compute momentum
+        m["dW" + str(l+1)] = beta*m["dW" + str(l+1)] + (1-beta)*grads['dW' + str(l+1)]
+        m["db" + str(l+1)] = beta*m["db" + str(l+1)] + (1-beta)*grads['db' + str(l+1)]
+        # update parameters
+        parameters["W" + str(l+1)] -= lr*(m["dW" + str(l+1)] + 
+                  (1./data_size)*reg_param*np.sign(parameters['W'+str(l+1)]))
+        parameters["b" + str(l+1)] -= lr*m["db" + str(l+1)]
+        
+    return parameters, m
+
+def initialize_adam(parameters) :
+    """
+    Initializes m and v as two python dictionaries with:
+                - keys: "dW1", "db1", ..., "dWL", "dbL" 
+                - values: numpy arrays of zeros of the same shape as the corresponding gradients/parameters.
+    
+    Arguments:
+    parameters -- python dictionary containing your parameters.
+                    parameters["W" + str(l)] = Wl
+                    parameters["b" + str(l)] = bl
+    
+    Returns: 
+    m -- dict containing exponentially weighted average of the gradient.
+                    m["dW" + str(l)] = ...
+                    m["db" + str(l)] = ...
+    v -- dict containing exponentially weighted average of the squared gradient.
+                    v["dW" + str(l)] = ...
+                    v["db" + str(l)] = ...
+
+    """
+    
+    L = len(parameters) // 2 # number of layers in the neural network
+    m = {}
+    v = {}
+
+    for l in range(L):
+        m["dW" + str(l+1)] = np.zeros(parameters["W" + str(l+1)].shape)
+        m["db" + str(l+1)] = np.zeros(parameters["b" + str(l+1)].shape)
+        v["dW" + str(l+1)] = np.zeros(parameters["W" + str(l+1)].shape)
+        v["db" + str(l+1)] = np.zeros(parameters["b" + str(l+1)].shape)
+    
+    return m, v
+
+def adam(parameters, grads, m, v, t, lr, beta1, beta2, epsilon, reg_param, data_size):
+    """
+    Update parameters using Adam
+    
+    Arguments:
+    parameters -- python dictionary containing your parameters:
+                    parameters['W' + str(l)] = Wl
+                    parameters['b' + str(l)] = bl
+    grads -- python dictionary containing your gradients for each parameters:
+                    grads['dW' + str(l)] = dWl
+                    grads['db' + str(l)] = dbl
+    m -- Adam variable, moving average of the first gradient, dict
+    v -- Adam variable, moving average of the squared gradient, dict
+    lr -- the learning rate, scalar
+    beta1 -- Exponential decay hyperparameter for the first moment estimates 
+    beta2 -- Exponential decay hyperparameter for the second moment estimates 
+    epsilon -- hyperparameter preventing division by zero in Adam updates
+
+    Returns:
+    parameters -- python dictionary containing your updated parameters 
+    m -- Adam variable, moving average of the first gradient, dict
+    v -- Adam variable, moving average of the squared gradient, dict
+    """
+    
+    L = len(parameters) // 2         # number of layers in the neural network
+    m_corrected = {}
+    v_corrected = {}
+    
+    for l in range(L):
+        # Moving average of the gradients
+        m["dW" + str(l+1)] = beta1*m["dW" + str(l+1)] + (1-beta1)*grads['dW' + str(l+1)]
+        m["db" + str(l+1)] = beta1*m["db" + str(l+1)] + (1-beta1)*grads['db' + str(l+1)]
+
+        # Compute bias-corrected first moment estimate
+        m_corrected["dW" + str(l+1)] = m["dW" + str(l+1)]#/(1-beta1**t)
+        m_corrected["db" + str(l+1)] = m["db" + str(l+1)]#/(1-beta1**t)
+
+        # Moving average of the squared gradients
+        v["dW" + str(l+1)] = beta2*v["dW" + str(l+1)] + (1-beta2)*np.power(grads['dW' + str(l+1)],2)
+        v["db" + str(l+1)] = beta2*v["db" + str(l+1)] + (1-beta2)*np.power(grads['db' + str(l+1)],2)
+
+        # Compute bias-corrected second raw moment estimate
+        v_corrected["dW" + str(l+1)] = v["dW" + str(l+1)]/(1-beta2**t)
+        v_corrected["db" + str(l+1)] = v["db" + str(l+1)]/(1-beta2**t)
+
+        # Update parameters
+        parameters["W" + str(l+1)] -= lr*(np.divide(m_corrected["dW" + str(l+1)],
+                  np.sqrt(v_corrected["dW" + str(l+1)])+epsilon) + 
+                  (1./data_size)*reg_param*np.sign(parameters['W'+str(l+1)]))
+        parameters["b" + str(l+1)] -= lr*np.divide(m_corrected["db" + str(l+1)],
+                  np.sqrt(v_corrected["db" + str(l+1)])+epsilon)
+
+    return parameters, m, v
+
+def MLP(X, y, layer_dims, problem_type, X_test, y_test, lr, num_iters, print_loss, add_del, 
+        print_add_del,del_threshold, prob_del, prob_add, max_hidden_size, num_below_margin,
+        reg_param):
     """
     Implements a L-layer multilayer perceptron (MLP)
     
@@ -542,11 +553,11 @@ def MLP(X, y, layers_dims, problem_type, lr, num_iters, print_loss, add_del,
     Returns:
     parameters -- parameters learned by the model. They can then be used to predict.
     """
-
     losses = []                         # keep track of loss for plotting
+    test_losses = []
     
     # Parameters initialization.
-    parameters = initialize_parameters(layers_dims)
+    parameters = initialize_parameters(layer_dims)
     
     # Loop (gradient descent)
     for i in range(0, num_iters):
@@ -555,40 +566,55 @@ def MLP(X, y, layers_dims, problem_type, lr, num_iters, print_loss, add_del,
         yhat,inputs = forwardprop(X, parameters, problem_type)
         
         # Compute cost.
-        loss = compute_loss(yhat, y, problem_type)
+        loss = compute_loss(yhat, y, parameters, reg_param, problem_type)
     
         # Backward propagation.
         grads = backprop(yhat, y, inputs, parameters, problem_type)        
  
         # Update parameters.
-        parameters = gradient_descent(parameters, grads, lr)
+        data_size = y.shape[1]
+        parameters = gradient_descent(parameters, grads, lr, reg_param, data_size)
 
         # Add / delete neurons
         if add_del:
             parameters = add_del_neurons(parameters,print_add_del,i,del_threshold, 
                                          prob_del,prob_add,max_hidden_size,num_below_margin)
+            
+        if X_test is not None and y_test is not None:
+            yhat_test,_ = forwardprop(X_test, parameters, problem_type)
+            test_loss = compute_loss(yhat_test, y_test, parameters, reg_param, problem_type)
                 
         # Print the cost every 100 training example
-        if print_loss and i % 100 == 0:
+        num_prints = max(1,num_iters // 20)
+        if print_loss and i % num_prints == 0:
             print('Loss after iteration %i: %f' % (i, loss))
+            if X_test is not None and y_test is not None:
+                print ("Test loss after epoch %i: %f" %(i, test_loss))
         losses.append(loss)
-        if i>0 and i%1000 == 0:
-            lr = lr/(1+0.0*i)
-            print('learning rate reduced to %f' % lr)
+        if X_test is not None and y_test is not None:
+            test_losses.append(test_loss)
+        
+        
+        #if i>0 and i%1000 == 0:
+        #    lr = lr/(1+0.0*i)
+        #    print('learning rate reduced to %f' % lr)
             
     # plot the cost
     if print_loss:
-        plt.plot(np.squeeze(losses))
+        plt.plot(losses,color='blue',label='train')
+        if X_test is not None and y_test is not None:
+            plt.plot(test_losses,color='red',label='test')
+        plt.legend(loc='upper right')
         plt.ylabel('loss')
-        plt.xlabel('iterations (per tens)')
-        plt.title('Training Loss')
+        plt.xlabel('iterations')
+        plt.title('Loss')
         plt.show()
-    assert type(parameters) == dict
-    return parameters, losses
+    return parameters, losses, test_losses
 
 def StochasticMLP(X, y, layer_dims, problem_type, X_test, y_test, optimizer, lr, batch_size,
-                  beta1, beta2, eps, num_epochs, print_loss, add_del, print_add_del, 
-                  del_threshold, prob_del, prob_add, max_hidden_size, num_below_margin):
+                  beta1, beta2, epsilon, num_epochs, print_loss, add_del, print_add_del, 
+                  del_threshold, prob_del, prob_add, max_hidden_size, num_below_margin,
+                  reg_param):
     """
     MLP which can be run in different optimizer modes.
     
@@ -600,7 +626,7 @@ def StochasticMLP(X, y, layer_dims, problem_type, X_test, y_test, optimizer, lr,
     mini_batch_size -- the size of a mini batch
     beta1 -- Exponential decay hyperparameter for the past gradients estimates 
     beta2 -- Exponential decay hyperparameter for the past squared gradients estimates 
-    eps -- hyperparameter preventing division by zero in Adam updates
+    epsilon -- hyperparameter preventing division by zero in Adam updates
     num_epochs -- number of epochs
     print_loss -- True to print the loss every 1000 epochs
 
@@ -609,9 +635,6 @@ def StochasticMLP(X, y, layer_dims, problem_type, X_test, y_test, optimizer, lr,
     """
     #X = X.T
     #y = y.T
-    #L = len(layers_dims)             # number of layers in the neural network
-    if len(y.shape) == 1:
-        y = y.reshape(1,-1)
     losses = []
     test_losses = []
     t = 0                            # counter required for Adam update
@@ -643,20 +666,27 @@ def StochasticMLP(X, y, layer_dims, problem_type, X_test, y_test, optimizer, lr,
             yhat,inputs = forwardprop(minibatch_X, parameters, problem_type)
 
             # Compute cost
-            loss = compute_loss(yhat, minibatch_y, problem_type)
+            loss = compute_loss(yhat, minibatch_y, parameters, reg_param, problem_type)
 
             # Backward propagation
             grads = backprop(yhat, minibatch_y, inputs, parameters, problem_type) 
 
             # Update parameters
+            num_in_batch = minibatch_y.shape[1]
             if optimizer == "sgd":
-                parameters = gradient_descent(parameters,grads,lr)
+                parameters = gradient_descent(parameters,grads,lr,reg_param,num_in_batch)
             elif optimizer == "momentum":
-                parameters, m = momentum(parameters,grads,m,beta1,lr)
+                parameters, m = momentum(parameters,grads,m,beta1,lr,reg_param,num_in_batch)
             elif optimizer == "adam":
-                t = t + 1 # Adam counter
-                parameters, m, v = adam(parameters,grads,m,v,t,lr,beta1,beta2,eps)
-                
+                t += 1 # Adam counter
+                parameters, m, v = adam(parameters,grads,m,v,t,lr,beta1,beta2,epsilon,
+                                        reg_param,num_in_batch)
+        
+        # Add / delete neurons
+        if add_del:
+            parameters = add_del_neurons(parameters,print_add_del,i,del_threshold, 
+                                         prob_del,prob_add,max_hidden_size,num_below_margin)
+            
         if X_test is not None and y_test is not None:
             minibatches = random_mini_batches(X_test, y_test, batch_size, seed)
             for minibatch in minibatches:
@@ -665,38 +695,35 @@ def StochasticMLP(X, y, layer_dims, problem_type, X_test, y_test, optimizer, lr,
                 minibatch_X, minibatch_y = minibatch
     
                 # Forward propagation
-                yhat,inputs = forwardprop(minibatch_X, parameters, problem_type)
+                yhat_test,_ = forwardprop(minibatch_X, parameters, problem_type)
     
                 # Compute cost
-                test_loss = compute_loss(yhat, minibatch_y, problem_type)
+                test_loss = compute_loss(yhat_test, minibatch_y, parameters, reg_param, problem_type)
         
-        # Add / delete neurons
-        if add_del:
-            parameters = add_del_neurons(parameters,print_add_del,i,del_threshold, 
-                                         prob_del,prob_add,max_hidden_size,num_below_margin)
-        
-        # Print the cost every 1000 epoch
-        if print_loss and i % 10 == 0:
+        # Print the every few losses
+        num_prints = max(1,num_epochs // 20)
+        if print_loss and i % num_prints == 0:
             print ("Training loss after epoch %i: %f" %(i, loss))
             if X_test is not None and y_test is not None:
                 print ("Test loss after epoch %i: %f" %(i, test_loss))
-        if print_loss:# and i % 100 == 0:
-            losses.append(loss)
-            if X_test is not None and y_test is not None:
+        losses.append(loss)
+        if X_test is not None and y_test is not None:
                 test_losses.append(test_loss)
                 
     # plot the cost
-    plt.plot(losses,color='blue',label='train')
-    plt.plot(test_losses,color='red',label='test')
-    plt.legend(loc='upper right')
-    plt.ylabel('loss')
-    plt.xlabel('epochs')
-    plt.title('Training Loss')
-    plt.show()
+    if print_loss:
+        plt.plot(losses,color='blue',label='train')
+        if X_test is not None and y_test is not None:
+            plt.plot(test_losses,color='red',label='test')
+        plt.legend(loc='upper right')
+        plt.ylabel('loss')
+        plt.xlabel('epochs')
+        plt.title('Loss')
+        plt.show()
 
     return parameters, losses, test_losses
 
-def _predict(X, y, parameters, problem_type):
+def _predict(X, parameters, problem_type):
     """
     Uses neural net parameters to predict labels for input data X
     
@@ -705,11 +732,11 @@ def _predict(X, y, parameters, problem_type):
     parameters -- parameters of the trained model
     
     Returns:
-    preds -- predictioned binary labels for dataset X
+    preds -- predictioned labels for dataset X
     """   
     m = X.shape[1]
-    preds = np.zeros(y.shape)
-    yhat,inputs = forwardprop(X, parameters, problem_type)
+    yhat,_ = forwardprop(X, parameters, problem_type)
+    preds = np.zeros(yhat.shape)
     if problem_type == 'regression':
         preds = yhat
     elif problem_type == 'binary':
@@ -735,19 +762,19 @@ def _score(X, y, parameters, problem_type):
     parameters -- parameters of the trained model
     
     Returns:
-    acc -- num correctly predict labels / num total labels
+    acc -- num correctly predict labels / num total labels (if classification)
+           R^2 value (if regression)
     """
     m = X.shape[1]
     if problem_type == 'regression':
-        yhat = _predict(X,y,parameters,problem_type)    
-        ssr = np.sum((y-yhat)**2)
+        preds = _predict(X,parameters,problem_type)    
+        ssr = np.sum((y-preds)**2)
         sst = np.sum((y-np.mean(y,axis=1))**2)
         acc = 1.-ssr/sst
     elif problem_type == 'binary':
-        preds = _predict(X,y,parameters,problem_type)
+        preds = _predict(X,parameters,problem_type)
         acc = np.sum((preds == y)*1./m)
     elif problem_type == 'multiclass':
-        yhat,inputs = forwardprop(X, parameters, problem_type)
-        acc = 1.*np.count_nonzero(np.argmax(yhat, axis=0) == np.argmax(y, axis=0))/m
+        yhat,_ = forwardprop(X, parameters, problem_type)
+        acc = 1./m*np.count_nonzero(np.argmax(yhat, axis=0) == np.argmax(y, axis=0))
     return acc
-
