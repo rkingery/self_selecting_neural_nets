@@ -17,7 +17,7 @@ np.random.seed(42)
 def RegressionMLP(X, y, layer_dims, X_test=None, y_test=None, lr=0.01, num_iters=1000, 
                   print_loss=True, add_del=False, print_add_del=False, del_threshold=0.03, 
                   prob_del=0.05, prob_add=0.05, max_hidden_size=1000, num_below_margin=5,
-                  reg_param=0.001):
+                  reg_param=0.):
     
     parameters, losses, test_losses = MLP(X, y, layer_dims, 'regression', X_test, y_test, lr, 
                              num_iters, print_loss, add_del, print_add_del, del_threshold, 
@@ -28,7 +28,7 @@ def RegressionStochasticMLP(X, y, layer_dims, X_test=None, y_test=None, optimize
                   lr=0.0007, batch_size=64, beta1=0.9, beta2=0.999, epsilon=1e-8, 
                   num_epochs=10000, print_loss=True,
                   add_del=False, print_add_del=False, del_threshold=0.03, prob_del=1., 
-                  prob_add=1., max_hidden_size=300, num_below_margin=5, reg_param=0.001):
+                  prob_add=1., max_hidden_size=300, num_below_margin=5, reg_param=0.):
     
     parameters, losses, test_losses = StochasticMLP(X, y, layer_dims, 'regression', X_test, 
                                        y_test, optimizer, lr, batch_size,
@@ -36,14 +36,6 @@ def RegressionStochasticMLP(X, y, layer_dims, X_test=None, y_test=None, optimize
                                        add_del, print_add_del, del_threshold, prob_del, 
                                        prob_add, max_hidden_size, num_below_margin, reg_param)
     return parameters, losses, test_losses
-
-def predict(X, parameters):
-    preds = _predict(X, parameters, 'regression')
-    return preds
-
-def score(X, y, parameters):
-    acc = _score(X, y, parameters, 'regression')
-    return acc
 
 
 if __name__ == '__main__':
@@ -66,13 +58,13 @@ if __name__ == '__main__':
     layer_dims = [X.shape[0],100, 1]
     parameters,_,_ = RegressionMLP(X_train, y_train, layer_dims, num_iters=1000,
                                    X_test=X_test, y_test=y_test,
-                                   lr=0.1, print_loss=True, reg_param=0.001)
+                                   lr=0.1, print_loss=True)
     #parameters,_,_ = RegressionStochasticMLP(X_train, y_train, layer_dims, optimizer='adam',
     #                                         X_test=X_test,y_test=y_test,
     #                                         batch_size=128,lr=0.01,num_epochs=1000, 
-    #                                         print_loss=True, reg_param=0.001)
-    print('training R^2 = %.3f' % score(X_train,y_train,parameters))
-    print('test R^2 = %.3f' % score(X_test,y_test,parameters))
+    #                                         print_loss=True)
+    print('training R^2 = %.3f' % score(X_train,y_train,parameters,'regression'))
+    print('test R^2 = %.3f' % score(X_test,y_test,parameters,'regression'))
     
     # checking model works
     yhat = predict(X,y,parameters)

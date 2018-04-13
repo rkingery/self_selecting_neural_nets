@@ -17,7 +17,7 @@ np.random.seed(2)
 def BinaryMLP(X, y, layer_dims, X_test=None, y_test=None, lr=0.01, num_iters=1000, 
                   print_loss=True, add_del=False, print_add_del=False, del_threshold=0.03, 
                   prob_del=0.05, prob_add=0.05, max_hidden_size=1000, num_below_margin=5,
-                  reg_param=0.001):
+                  reg_param=0.):
     
     parameters, losses, test_losses = MLP(X, y, layer_dims, 'binary', X_test, 
                                        y_test, lr, num_iters, print_loss, add_del, 
@@ -29,7 +29,7 @@ def BinaryStochasticMLP(X, y, layer_dims, X_test=None, y_test=None, optimizer='s
                   lr=0.0007, batch_size=64, beta1=0.9, beta2=0.999, epsilon=1e-8, 
                   num_epochs=10000, print_loss=True,
                   add_del=False, print_add_del=False, del_threshold=0.03, prob_del=1., 
-                  prob_add=1., max_hidden_size=300, num_below_margin=5, reg_param=0.001):
+                  prob_add=1., max_hidden_size=300, num_below_margin=5, reg_param=0.):
     
     parameters, losses, test_losses = StochasticMLP(X, y, layer_dims, 'binary', 
                                                     X_test, y_test, optimizer, lr, batch_size,
@@ -39,35 +39,6 @@ def BinaryStochasticMLP(X, y, layer_dims, X_test=None, y_test=None, optimizer='s
                                                     max_hidden_size, num_below_margin,
                                                     reg_param)
     return parameters, losses, test_losses
-
-def predict(X, parameters):
-    """
-    Uses neural net parameters to predict labels for input data X
-    
-    Arguments:
-    X -- dataset to predict labels for
-    parameters -- parameters of the trained model
-    
-    Returns:
-    preds -- predictioned binary labels for dataset X
-    """   
-    preds = _predict(X, parameters, 'binary')
-    return preds
-
-def score(X, y, parameters):
-    """
-    Calculates accuracy of neural net on inputs X, true labels y
-    
-    Arguments:
-    X -- dataset to predict labels for
-    y -- true labels for X
-    parameters -- parameters of the trained model
-    
-    Returns:
-    acc -- num correctly predict labels / num total labels
-    """  
-    acc = _score(X, y, parameters, 'binary')
-    return acc
 
 def gen_data(size=1000,var=2.):
     centers = 5
@@ -96,7 +67,7 @@ def plot_model(parameters,x1,x2):
     xx, yy = np.mgrid[-3:3:.01, -3:3:.01]
     XX = np.c_[xx.ravel(), yy.ravel()].T
 
-    yhat = predict(XX,parameters).reshape(xx.shape)
+    yhat = predict(XX,parameters,'binary').reshape(xx.shape)
     
     f, ax = plt.subplots(figsize=(8, 6))
     ax.contour(xx, yy, yhat, levels=[1.5])#, cmap="Greys", vmin=0, vmax=.6)
@@ -125,31 +96,30 @@ if __name__ == '__main__':
     y_train = y_train.T.reshape(1,-1)
     y_test = y_test.T.reshape(1,-1)
     
-    layer_dims = [X_train.shape[0], 10, 1]
-    num_iters = 5000
+    layer_dims = [X_train.shape[0], 100, 1]
+    num_iters = 500
     lr = 0.01
-    bs = X_train.shape[1]
+    bs = 128#X_train.shape[1]
     
-    parameters,_,_ = BinaryMLP(X_train, y_train, layer_dims)#, X_test=X_test, 
-                               #y_test=y_test,num_iters=num_iters, add_del=False, 
-                               #print_loss=True, reg_param=0.00)
-    print('training accuracy = %.3f' % score(X_train,y_train,parameters))
-    print('test accuracy = %.3f' % score(X_test,y_test,parameters))
-    plot_model(parameters,x1,x2)
+#    parameters,_,_ = BinaryMLP(X_train, y_train, layer_dims, X_test=X_test,
+#                               y_test=y_test, num_iters=num_iters, add_del=False, 
+#                               print_loss=True)
+#    print('training accuracy = %.3f' % score(X_train,y_train,parameters,'binary'))
+#    print('test accuracy = %.3f' % score(X_test,y_test,parameters,'binary'))
+#    plot_model(parameters,x1,x2)
 
     parameters,_,_ = BinaryStochasticMLP(X_train, y_train, layer_dims, X_test=X_test, y_test=y_test, 
                                         num_epochs=num_iters, lr=lr, add_del=False, optimizer='adam', 
-                                        batch_size=bs, print_loss=True, print_add_del=False, 
-                                        reg_param=0.00)
-    print('train accuracy = %.3f' % score(X_train,y_train,parameters))
-    print('test accuracy = %.3f' % score(X_test,y_test,parameters))
+                                        batch_size=bs, print_loss=True, print_add_del=False)
+    print('train accuracy = %.3f' % score(X_train,y_train,parameters,'binary'))
+    print('test accuracy = %.3f' % score(X_test,y_test,parameters,'binary'))
     plot_model(parameters,x1,x2)
     
 #    parameters,_,_ = BinaryStochasticMLP(X_train, y_train, layer_dims, X_test=X_test, y_test=y_test, 
 #                                       num_epochs=num_iters, lr=lr, add_del=True, optimizer='sgd', 
 #                                       batch_size=1000, print_loss=True, print_add_del=False)
-#    print('train accuracy = %.3f' % score(X_train,y_train,parameters))
-#    print('test accuracy = %.3f' % score(X_test,y_test,parameters))
+#    print('train accuracy = %.3f' % score(X_train,y_train,parameters,'binary'))
+#    print('test accuracy = %.3f' % score(X_test,y_test,parameters,'binary'))
 #
 #    xx = np.arange(1,num_iters+1)
 #    plt.plot(xx,ad_loss,color='blue',label='add/del')

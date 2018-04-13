@@ -19,7 +19,7 @@ np.random.seed(42)
 def MulticlassMLP(X, y, layers_dims, X_test=None, y_test=None, lr=0.01, num_iters=1000, 
                   print_loss=True, add_del=False, print_add_del=False, del_threshold=0.03, 
                   prob_del=0.05, prob_add=0.05, max_hidden_size=1000, num_below_margin=5,
-                  reg_param=0.001):
+                  reg_param=0.):
     
     parameters, losses, test_losses = MLP(X, y, layers_dims, 'multiclass', X_test, y_test, lr, 
                              num_iters, print_loss, add_del, print_add_del,del_threshold, 
@@ -30,7 +30,7 @@ def MulticlassStochasticMLP(X, y, layer_dims, X_test=None, y_test=None, optimize
                   lr=0.0007, batch_size=64, beta1=0.9, beta2=0.999, epsilon=1e-8, 
                   num_epochs=10000, print_loss=True,
                   add_del=False, print_add_del=False, del_threshold=0.03, prob_del=1., 
-                  prob_add=1., max_hidden_size=300, num_below_margin=5, reg_param=0.001):
+                  prob_add=1., max_hidden_size=300, num_below_margin=5, reg_param=0.):
     
     parameters, losses, test_losses = StochasticMLP(X, y, layer_dims, 'multiclass', X_test, 
                                        y_test, optimizer, lr, batch_size, beta1, beta2, 
@@ -38,35 +38,6 @@ def MulticlassStochasticMLP(X, y, layer_dims, X_test=None, y_test=None, optimize
                                        del_threshold, prob_del, prob_add, max_hidden_size, 
                                        num_below_margin, reg_param)
     return parameters, losses, test_losses
-
-def predict(X, parameters):
-    """
-    Uses neural net parameters to predict labels for input data X
-    
-    Arguments:
-    X -- dataset to predict labels for
-    parameters -- parameters of the trained model
-    
-    Returns:
-    preds -- predictioned binary labels for dataset X
-    """   
-    preds = _predict(X, parameters, 'multiclass')
-    return preds
-
-def score(X, y, parameters):
-    """
-    Calculates accuracy of neural net on inputs X, true labels y
-    
-    Arguments:
-    X -- dataset to predict labels for
-    y -- true labels for X
-    parameters -- parameters of the trained model
-    
-    Returns:
-    acc -- num correctly predict labels / num total labels
-    """  
-    acc = _score(X, y, parameters, 'multiclass')
-    return acc
 
 if __name__ == '__main__':
 #    data_size = 7
@@ -103,20 +74,20 @@ if __name__ == '__main__':
     #parameters,losses,test_losses = MulticlassStochasticMLP(X_train, y_train, layer_dims, 
     #                                              optimizer='adam', batch_size=128, 
     #                                              num_epochs=num_iters, print_loss=True)      
-    print('training accuracy = %.3f' % score(X_train,y_train,parameters))
-    print('test accuracy = %.3f' % score(X_test,y_test,parameters))
+    print('training accuracy = %.3f' % score(X_train,y_train,parameters,'multiclass'))
+    print('test accuracy = %.3f' % score(X_test,y_test,parameters,'multiclass'))
     
     
 #    parameters,_,reg_loss = MulticlassStochasticMLP(X_train, y_train, layer_dims, X_test=X_test, y_test=y_test, 
 #                                        num_epochs=num_iters, lr=lr, add_del=False, optimizer='sgd', 
 #                                        batch_size=128, print_loss=True, print_add_del=False)
-#    print('train accuracy = %.3f' % score(X_train,y_train,parameters))
-#    print('test accuracy = %.3f' % score(X_test,y_test,parameters))
+#    print('train accuracy = %.3f' % score(X_train,y_train,parameters,'multiclass'))
+#    print('test accuracy = %.3f' % score(X_test,y_test,parameters,'multiclass'))
 #    parameters,_,ad_loss = MulticlassStochasticMLP(X_train, y_train, layer_dims, X_test=X_test, y_test=y_test, 
 #                                       num_epochs=num_iters, lr=lr, add_del=True, optimizer='sgd', 
 #                                       batch_size=128, print_loss=True, print_add_del=False)
-#    print('train accuracy = %.3f' % score(X_train,y_train,parameters))
-#    print('test accuracy = %.3f' % score(X_test,y_test,parameters))
+#    print('train accuracy = %.3f' % score(X_train,y_train,parameters,'multiclass'))
+#    print('test accuracy = %.3f' % score(X_test,y_test,parameters,'multiclass'))
 #
 #    xx = np.arange(1,num_iters+1)
 #    plt.plot(xx,ad_loss,color='blue',label='add/del')

@@ -11,6 +11,9 @@
 #   relu
 #   softmax
 #   initialize_parameters
+#   forwardprop
+#   compute_loss
+#   backprop
 #   gradient_descent
 #   random_mini_batches
 #   initialize_momentum
@@ -19,8 +22,8 @@
 #   adam
 #   MLP
 #   StochasticMLP
-#   _predict
-#   _score
+#   predict
+#   score
 
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
@@ -254,7 +257,7 @@ def compute_loss(yhat, y, parameters, reg_param, problem_type):
     
     # add L1 regularization term
     w = flatten_weights(parameters)
-    #loss += 1./m*reg_param*np.sum(np.abs(w))
+    loss += 1./m*reg_param*np.sum(np.abs(w))
     
     return loss
 
@@ -340,7 +343,7 @@ def gradient_descent(parameters, grads, lr, reg_param, data_size):
 
     L = len(parameters) // 2 # number of layers in the neural network
     for l in range(L):        
-        parameters['W'+str(l+1)] -= lr*(grads['dW'+str(l+1)])# + 
+        parameters['W'+str(l+1)] -= lr*(grads['dW'+str(l+1)]) #+ 
                   #(1./data_size)*reg_param*np.sign(parameters['W'+str(l+1)]))
         parameters['b'+str(l+1)] -= lr*grads['db'+str(l+1)]                
     return parameters
@@ -442,8 +445,8 @@ def momentum(parameters, grads, m, beta, lr, reg_param, data_size):
         m["dW" + str(l+1)] = beta*m["dW" + str(l+1)] + (1-beta)*grads['dW' + str(l+1)]
         m["db" + str(l+1)] = beta*m["db" + str(l+1)] + (1-beta)*grads['db' + str(l+1)]
         # update parameters
-        parameters["W" + str(l+1)] -= lr*(m["dW" + str(l+1)] + 
-                  (1./data_size)*reg_param*np.sign(parameters['W'+str(l+1)]))
+        parameters["W" + str(l+1)] -= lr*(m["dW" + str(l+1)]) #+ 
+                  #(1./data_size)*reg_param*np.sign(parameters['W'+str(l+1)]))
         parameters["b" + str(l+1)] -= lr*m["db" + str(l+1)]
         
     return parameters, m
@@ -528,8 +531,8 @@ def adam(parameters, grads, m, v, t, lr, beta1, beta2, epsilon, reg_param, data_
 
         # Update parameters
         parameters["W" + str(l+1)] -= lr*(np.divide(m_corrected["dW" + str(l+1)],
-                  np.sqrt(v_corrected["dW" + str(l+1)])+epsilon) + 
-                  (1./data_size)*reg_param*np.sign(parameters['W'+str(l+1)]))
+                  np.sqrt(v_corrected["dW" + str(l+1)])+epsilon)) #+ 
+                  #(1./data_size)*reg_param*np.sign(parameters['W'+str(l+1)]))
         parameters["b" + str(l+1)] -= lr*np.divide(m_corrected["db" + str(l+1)],
                   np.sqrt(v_corrected["db" + str(l+1)])+epsilon)
 
@@ -706,9 +709,12 @@ def StochasticMLP(X, y, layer_dims, problem_type, X_test, y_test, optimizer, lr,
             print ("Training loss after epoch %i: %f" %(i, loss))
             if X_test is not None and y_test is not None:
                 print ("Test loss after epoch %i: %f" %(i, test_loss))
-        losses.append(loss)
-        if X_test is not None and y_test is not None:
-                test_losses.append(test_loss)
+                
+        num_losses = max(1,num_epochs // 100)
+        if i % num_losses == 0:
+            losses.append(loss)
+            if X_test is not None and y_test is not None:
+                    test_losses.append(test_loss)
                 
     # plot the cost
     if print_loss:
@@ -723,7 +729,7 @@ def StochasticMLP(X, y, layer_dims, problem_type, X_test, y_test, optimizer, lr,
 
     return parameters, losses, test_losses
 
-def _predict(X, parameters, problem_type):
+def predict(X, parameters, problem_type):
     """
     Uses neural net parameters to predict labels for input data X
     
@@ -752,7 +758,7 @@ def _predict(X, parameters, problem_type):
             preds[imax,i] = 1
     return preds
 
-def _score(X, y, parameters, problem_type):
+def score(X, y, parameters, problem_type):
     """
     Calculates accuracy of neural net on inputs X, true labels y
     
@@ -767,12 +773,12 @@ def _score(X, y, parameters, problem_type):
     """
     m = X.shape[1]
     if problem_type == 'regression':
-        preds = _predict(X,parameters,problem_type)    
+        preds = predict(X,parameters,problem_type)    
         ssr = np.sum((y-preds)**2)
         sst = np.sum((y-np.mean(y,axis=1))**2)
         acc = 1.-ssr/sst
     elif problem_type == 'binary':
-        preds = _predict(X,parameters,problem_type)
+        preds = predict(X,parameters,problem_type)
         acc = np.sum((preds == y)*1./m)
     elif problem_type == 'multiclass':
         yhat,_ = forwardprop(X, parameters, problem_type)
