@@ -16,7 +16,7 @@ np.random.seed(2)
     
 def BinaryMLP(X, y, layer_dims, X_test=None, y_test=None, lr=0.01, num_iters=1000, 
                   print_loss=True, add_del=False, print_add_del=False, del_threshold=0.03, 
-                  prob_del=0.05, prob_add=0.05, max_hidden_size=1000, num_below_margin=5,
+                  prob_del=0.05, prob_add=0.05, max_hidden_size=300, num_below_margin=5,
                   reg_param=0.):
     
     parameters, losses, test_losses = MLP(X, y, layer_dims, 'binary', X_test, 
@@ -28,8 +28,8 @@ def BinaryMLP(X, y, layer_dims, X_test=None, y_test=None, lr=0.01, num_iters=100
 def BinaryStochasticMLP(X, y, layer_dims, X_test=None, y_test=None, optimizer='sgd', 
                   lr=0.0007, batch_size=64, beta1=0.9, beta2=0.999, epsilon=1e-8, 
                   num_epochs=10000, print_loss=True,
-                  add_del=False, print_add_del=False, del_threshold=0.03, prob_del=1., 
-                  prob_add=1., max_hidden_size=300, num_below_margin=5, reg_param=0.):
+                  add_del=False, print_add_del=False, del_threshold=0.03, prob_del=0.05, 
+                  prob_add=0.005, max_hidden_size=300, num_below_margin=1, reg_param=0.):
     
     parameters, losses, test_losses = StochasticMLP(X, y, layer_dims, 'binary', 
                                                     X_test, y_test, optimizer, lr, batch_size,
@@ -96,10 +96,10 @@ if __name__ == '__main__':
     y_train = y_train.T.reshape(1,-1)
     y_test = y_test.T.reshape(1,-1)
     
-    layer_dims = [X_train.shape[0], 100, 1]
-    num_iters = 500
-    lr = 0.01
-    bs = 128#X_train.shape[1]
+    layer_dims = [X_train.shape[0], 10, 1]
+    num_iters = 20000
+    lr = 0.1
+    bs = X_train.shape[1] // 16
     
 #    parameters,_,_ = BinaryMLP(X_train, y_train, layer_dims, X_test=X_test,
 #                               y_test=y_test, num_iters=num_iters, add_del=False, 
@@ -109,7 +109,7 @@ if __name__ == '__main__':
 #    plot_model(parameters,x1,x2)
 
     parameters,_,_ = BinaryStochasticMLP(X_train, y_train, layer_dims, X_test=X_test, y_test=y_test, 
-                                        num_epochs=num_iters, lr=lr, add_del=False, optimizer='adam', 
+                                        num_epochs=num_iters, lr=lr, add_del=True, optimizer='sgd', 
                                         batch_size=bs, print_loss=True, print_add_del=False)
     print('train accuracy = %.3f' % score(X_train,y_train,parameters,'binary'))
     print('test accuracy = %.3f' % score(X_test,y_test,parameters,'binary'))

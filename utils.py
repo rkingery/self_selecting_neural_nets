@@ -558,6 +558,7 @@ def MLP(X, y, layer_dims, problem_type, X_test, y_test, lr, num_iters, print_los
     """
     losses = []                         # keep track of loss for plotting
     test_losses = []
+    num_neurons = []
     
     # Parameters initialization.
     parameters = initialize_parameters(layer_dims)
@@ -582,6 +583,7 @@ def MLP(X, y, layer_dims, problem_type, X_test, y_test, lr, num_iters, print_los
         if add_del:
             parameters = add_del_neurons(parameters,print_add_del,i,del_threshold, 
                                          prob_del,prob_add,max_hidden_size,num_below_margin)
+            num_neuron = parameters['b1'].shape[0]
             
         if X_test is not None and y_test is not None:
             yhat_test,_ = forwardprop(X_test, parameters, problem_type)
@@ -591,12 +593,18 @@ def MLP(X, y, layer_dims, problem_type, X_test, y_test, lr, num_iters, print_los
         num_prints = max(1,num_iters // 20)
         if print_loss and i % num_prints == 0:
             print('Loss after iteration %i: %f' % (i, loss))
+            if add_del:
+                print('Number of neurons %i: %d' % (i, num_neuron))
             if X_test is not None and y_test is not None:
                 print ("Test loss after epoch %i: %f" %(i, test_loss))
-        losses.append(loss)
-        if X_test is not None and y_test is not None:
-            test_losses.append(test_loss)
-        
+                
+        num_losses = max(1,num_iters // 100)
+        if i % num_losses == 0:
+            losses.append(loss)
+            if add_del:
+                num_neurons.append(num_neuron)
+            if X_test is not None and y_test is not None:
+                    test_losses.append(test_loss)        
         
         #if i>0 and i%1000 == 0:
         #    lr = lr/(1+0.0*i)
@@ -612,6 +620,14 @@ def MLP(X, y, layer_dims, problem_type, X_test, y_test, lr, num_iters, print_los
         plt.xlabel('iterations')
         plt.title('Loss')
         plt.show()
+        
+    if add_del:
+        plt.plot(num_neurons,color='green',label='# neurons')
+        plt.ylabel('# neurons')
+        plt.xlabel('epochs')
+        plt.title('Number of neurons')
+        plt.show()
+        
     return parameters, losses, test_losses
 
 def StochasticMLP(X, y, layer_dims, problem_type, X_test, y_test, optimizer, lr, batch_size,
@@ -640,11 +656,14 @@ def StochasticMLP(X, y, layer_dims, problem_type, X_test, y_test, optimizer, lr,
     #y = y.T
     losses = []
     test_losses = []
+    num_neurons = []
     t = 0                            # counter required for Adam update
     seed = 42
     
     # Initialize parameters
     parameters = initialize_parameters(layer_dims)
+    #num_neuron = parameters['b1'].shape[0]
+    #num_neurons.append(num_neuron)
 
     # Initialize the optimizer
     if optimizer == "sgd":
@@ -689,6 +708,7 @@ def StochasticMLP(X, y, layer_dims, problem_type, X_test, y_test, optimizer, lr,
         if add_del:
             parameters = add_del_neurons(parameters,print_add_del,i,del_threshold, 
                                          prob_del,prob_add,max_hidden_size,num_below_margin)
+            num_neuron = parameters['b1'].shape[0]
             
         if X_test is not None and y_test is not None:
             minibatches = random_mini_batches(X_test, y_test, batch_size, seed)
@@ -707,12 +727,16 @@ def StochasticMLP(X, y, layer_dims, problem_type, X_test, y_test, optimizer, lr,
         num_prints = max(1,num_epochs // 20)
         if print_loss and i % num_prints == 0:
             print ("Training loss after epoch %i: %f" %(i, loss))
+            if add_del:
+                print ("Number of neurons %i: %d" %(i, num_neuron))
             if X_test is not None and y_test is not None:
                 print ("Test loss after epoch %i: %f" %(i, test_loss))
                 
         num_losses = max(1,num_epochs // 100)
         if i % num_losses == 0:
             losses.append(loss)
+            if add_del:
+                num_neurons.append(num_neuron)
             if X_test is not None and y_test is not None:
                     test_losses.append(test_loss)
                 
@@ -725,6 +749,13 @@ def StochasticMLP(X, y, layer_dims, problem_type, X_test, y_test, optimizer, lr,
         plt.ylabel('loss')
         plt.xlabel('epochs')
         plt.title('Loss')
+        plt.show()
+        
+    if add_del:
+        plt.plot(num_neurons,color='green',label='# neurons')
+        plt.ylabel('# neurons')
+        plt.xlabel('epochs')
+        plt.title('Number of neurons')
         plt.show()
 
     return parameters, losses, test_losses
