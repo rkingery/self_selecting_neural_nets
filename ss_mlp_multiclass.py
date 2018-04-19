@@ -16,27 +16,28 @@ from sklearn.datasets import fetch_mldata
 from utils import *
 np.random.seed(42)
 
-def MulticlassMLP(X, y, layers_dims, X_test=None, y_test=None, lr=0.01, num_iters=1000, 
-                  print_loss=True, add_del=False, print_add_del=False, del_threshold=0.03, 
-                  prob_del=0.05, prob_add=0.05, max_hidden_size=1000, num_below_margin=5,
-                  reg_param=0.):
+def MulticlassMLP(X, y, layer_dims, X_test=None, y_test=None, lr=0.01, num_iters=1000, 
+                  print_loss=True, add_del=False, print_add_del=False, 
+                  reg_param=0.,delta=0.01, prob=0.5, epsilon=0.01, max_hidden_size=100, tau=10):
+                  #del_threshold=0.03, prob_del=0.05, prob_add=0.05, max_hidden_size=300, num_below_margin=5):
     
-    parameters, losses, test_losses = MLP(X, y, layers_dims, 'multiclass', X_test, y_test, lr, 
-                             num_iters, print_loss, add_del, print_add_del,del_threshold, 
-                             prob_del, prob_add, max_hidden_size, num_below_margin,reg_param)
+    parameters, losses, test_losses = \
+        MLP(X, y, layer_dims, 'multiclass', X_test, y_test, lr, num_iters, print_loss, add_del, 
+            print_add_del, reg_param, delta,prob,epsilon,max_hidden_size,tau)
     return parameters, losses, test_losses
 
 def MulticlassStochasticMLP(X, y, layer_dims, X_test=None, y_test=None, optimizer='sgd', 
-                  lr=0.0007, batch_size=64, beta1=0.9, beta2=0.999, epsilon=1e-8, 
+                  lr=0.0007, batch_size=64, beta1=0.9, beta2=0.999, eps=1e-8, 
                   num_epochs=10000, print_loss=True,
-                  add_del=False, print_add_del=False, del_threshold=0.03, prob_del=1., 
-                  prob_add=1., max_hidden_size=300, num_below_margin=5, reg_param=0.):
+                  add_del=False, print_add_del=False, reg_param=0.,
+                  delta=0.01, prob=0.5, epsilon=0.05, max_hidden_size=100, tau=30):
+                  #del_threshold=0.03, prob_del=1., prob_add=1., max_hidden_size=300, num_below_margin=1):
     
-    parameters, losses, test_losses = StochasticMLP(X, y, layer_dims, 'multiclass', X_test, 
-                                       y_test, optimizer, lr, batch_size, beta1, beta2, 
-                                       epsilon, num_epochs, print_loss, add_del, print_add_del, 
-                                       del_threshold, prob_del, prob_add, max_hidden_size, 
-                                       num_below_margin, reg_param)
+    parameters, losses, test_losses = \
+        StochasticMLP(X, y, layer_dims, 'multiclass', X_test, y_test, optimizer, lr, batch_size,
+                  beta1, beta2, eps, num_epochs, print_loss, add_del, print_add_del, reg_param,
+                  delta,prob,epsilon,max_hidden_size,tau)
+    
     return parameters, losses, test_losses
 
 if __name__ == '__main__':
@@ -67,10 +68,10 @@ if __name__ == '__main__':
     lr = 0.01
     num_features = X_train.shape[0]
     num_classes = y_train.shape[0]
-    layer_dims = [num_features, 100, num_classes]
+    layer_dims = [num_features, 10, num_classes]
     parameters,_,_ = MulticlassMLP(X_train,y_train, layer_dims, num_iters=num_iters,
                                    X_test=X_test,y_test=y_test,
-                                   lr=lr, print_loss=True, add_del=False)
+                                   lr=lr, print_loss=True, add_del=True)
     #parameters,losses,test_losses = MulticlassStochasticMLP(X_train, y_train, layer_dims, 
     #                                              optimizer='adam', batch_size=128, 
     #                                              num_epochs=num_iters, print_loss=True)      
