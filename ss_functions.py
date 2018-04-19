@@ -138,8 +138,16 @@ def add_neurons_adam(parameters,m,v,losses,epsilon,max_hidden_size,tau,prob):
     W_out = parameters['W'+str(l+1)]    
     hidden_size = b_in.shape[0]
     
+    mW_in = m['dW'+str(l)]
+    mb_in = m['db'+str(l)]
+    mW_out = m['dW'+str(l+1)]
+    
+    vW_in = v['dW'+str(l)]
+    vb_in = v['db'+str(l)]
+    vW_out = v['dW'+str(l+1)]
+
     if hidden_size >= max_hidden_size:
-        return parameters
+        return parameters,m,v
     
     max_loss = np.max(losses)
     losses = losses[-tau:]  # keep only losses in window t-tau,...,t
@@ -153,13 +161,13 @@ def add_neurons_adam(parameters,m,v,losses,epsilon,max_hidden_size,tau,prob):
         b_in = np.append(b_in, np.zeros((1,1)), axis=0)
         W_out = np.append(W_out, np.random.randn(W_out.shape[0],1), axis=1)
         
-        mW_in = np.append(m['dW'+str(l)], np.random.randn(1,W_in.shape[1]), axis=0)
-        mb_in = np.append(m['db'+str(l)], np.random.randn((1,1)), axis=0)
-        mW_out = np.append(m['dW'+str(l+1)], np.random.randn(W_out.shape[0],1), axis=1)
+        mW_in = np.append(mW_in, .1*np.ones((1,W_in.shape[1])), axis=0)
+        mb_in = np.append(mb_in, .1*np.ones((1,1)), axis=0)
+        mW_out = np.append(mW_out, .1*np.ones((W_out.shape[0],1)), axis=1)
 
-        vW_in = np.append(v['dW'+str(l)], np.random.randn(1,W_in.shape[1]), axis=0)
-        vb_in = np.append(v['db'+str(l)], np.random.randn((1,1)), axis=0)
-        vW_out = np.append(v['dW'+str(l+1)], np.random.randn(W_out.shape[0],1), axis=1)        
+        vW_in = np.append(vW_in, .1*np.ones((1,W_in.shape[1])), axis=0)
+        vb_in = np.append(vb_in, .1*np.ones((1,1)), axis=0)
+        vW_out = np.append(vW_out, .1*np.ones((W_out.shape[0],1)), axis=1)        
     
     parameters['W'+str(l)] = W_in
     parameters['b'+str(l)] = b_in

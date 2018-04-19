@@ -16,7 +16,7 @@ np.random.seed(2)
     
 def BinaryMLP(X, y, layer_dims, X_test=None, y_test=None, lr=0.01, num_iters=1000, 
                   print_loss=True, add_del=False, print_add_del=False, 
-                  reg_param=0.,delta=0.01, prob=0.5, epsilon=0.01, max_hidden_size=100, tau=10):
+                  reg_param=0.,delta=0.01, prob=0.5, epsilon=0.01, max_hidden_size=100, tau=30):
                   #del_threshold=0.03, prob_del=0.05, prob_add=0.05, max_hidden_size=300, num_below_margin=5):
     
     parameters, losses, test_losses = \
@@ -28,7 +28,7 @@ def BinaryStochasticMLP(X, y, layer_dims, X_test=None, y_test=None, optimizer='s
                   lr=0.0007, batch_size=64, beta1=0.9, beta2=0.999, eps=1e-8, 
                   num_epochs=10000, print_loss=True,
                   add_del=False, print_add_del=False, reg_param=0.,
-                  delta=0.01, prob=0.5, epsilon=0.05, max_hidden_size=100, tau=30):
+                  delta=0.01, prob=0.5, epsilon=0.01, max_hidden_size=100, tau=30):
                   #del_threshold=0.03, prob_del=1., prob_add=1., max_hidden_size=300, num_below_margin=1):
     
     parameters, losses, test_losses = \
@@ -95,7 +95,7 @@ if __name__ == '__main__':
     y_test = y_test.T.reshape(1,-1)
     
     layer_dims = [X_train.shape[0], 10, 1]
-    num_iters = 500
+    num_iters = 1000
     lr = 0.1
     bs = X_train.shape[1] // 16
     
@@ -107,7 +107,7 @@ if __name__ == '__main__':
 #    plot_model(parameters,x1,x2)
 
     parameters,losses,_ = BinaryStochasticMLP(X_train, y_train, layer_dims, X_test=None, y_test=None, 
-                                        num_epochs=num_iters, lr=lr, add_del=True, optimizer='sgd', 
+                                        num_epochs=num_iters, lr=lr, add_del=True, optimizer='adam', 
                                         batch_size=bs, print_loss=True, print_add_del=False)
     print('train accuracy = %.3f' % score(X_train,y_train,parameters,'binary'))
     print('test accuracy = %.3f' % score(X_test,y_test,parameters,'binary'))

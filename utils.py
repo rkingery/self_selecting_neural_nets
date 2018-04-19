@@ -504,17 +504,19 @@ def MLP(X, y, layer_dims, problem_type, X_test, y_test, lr, num_iters, print_los
         parameters = gradient_descent(parameters, grads, lr, reg_param, data_size)
 
         # Add / delete neurons
-        if add_del and i>=100:
+        if add_del and i>tau:
             #parameters = add_del_neurons_orig(parameters,print_add_del,i,del_threshold, 
             #                             prob_del,prob_add,max_hidden_size,num_below_margin)
             parameters = delete_neurons(parameters,delta,prob)
             parameters = add_neurons(parameters,losses,epsilon,max_hidden_size,tau,prob)  
-            num_neuron = parameters['b1'].shape[0]
             
         if X_test is not None and y_test is not None:
             yhat_test,_ = forwardprop(X_test, parameters, problem_type)
             test_loss = compute_loss(yhat_test, y_test, parameters, reg_param, problem_type)
-                
+
+        if add_del:
+            num_neuron = parameters['b1'].shape[0]
+
         # Print the cost every 100 training example
         num_prints = max(1,num_iters // 20)
         if print_loss and i % num_prints == 0:
@@ -583,6 +585,7 @@ def StochasticMLP(X, y, layer_dims, problem_type, X_test, y_test, optimizer, lr,
     #y = y.T
     losses = []
     test_losses = []
+    all_losses = []
     num_neurons = []
     t = 0                            # counter required for Adam update
     seed = 42
@@ -630,18 +633,19 @@ def StochasticMLP(X, y, layer_dims, problem_type, X_test, y_test, optimizer, lr,
                 t += 1 # Adam counter
                 parameters, m, v = adam(parameters,grads,m,v,t,lr,beta1,beta2,eps,
                                         reg_param,num_in_batch)
+            all_losses.append(loss)
         
         # Add / delete neurons
-        if add_del:
+        if add_del and i>tau:
             if optimizer == 'sgd':
                 #parameters = add_del_neurons_orig(parameters,print_add_del,i,del_threshold, 
                 #                         prob_del,prob_add,max_hidden_size,num_below_margin)
                 parameters = delete_neurons(parameters,delta,prob)
-                parameters = add_neurons(parameters,losses,epsilon,max_hidden_size,tau,prob)                
-            #if optimizer == 'adam':
-            #    parameters,m,v = delete_neurons_adam(...)
-            #    parameters,m,v = add_neurons_adam(...)
-            num_neuron = parameters['b1'].shape[0]
+                parameters = add_neurons(parameters,all_losses,epsilon,max_hidden_size,tau,prob)                
+            if optimizer == 'adam':
+                parameters,m,v = delete_neurons_adam(parameters,m,v,delta,prob)
+                parameters,m,v = add_neurons_adam(parameters,m,v,all_losses,epsilon,max_hidden_size,tau,prob)
+                #print len(add_neurons_adam(parameters,m,v,all_losses,epsilon,max_hidden_size,tau,prob))
             
         if X_test is not None and y_test is not None:
             minibatches = random_mini_batches(X_test, y_test, batch_size, seed)
@@ -656,18 +660,20 @@ def StochasticMLP(X, y, layer_dims, problem_type, X_test, y_test, optimizer, lr,
                 # Compute cost
                 test_loss = compute_loss(yhat_test, minibatch_y, parameters, reg_param, problem_type)
         
+        if add_del:
+            num_neuron = parameters['b1'].shape[0]
+        
         # Print the every few losses
         num_prints = max(1,num_epochs // 20)
         if print_loss and i % num_prints == 0:
             print ("Training loss after epoch %i: %f" %(i, loss))
-            if add_del and i>=100:
+            if add_del:
                 print ("Number of neurons %i: %d" %(i, num_neuron))
             if X_test is not None and y_test is not None:
                 print ("Test loss after epoch %i: %f" %(i, test_loss))
                 
-        #num_losses = max(1,num_epochs // 100)
-        #if i % num_losses == 0:
-        if True:
+        num_losses = max(1,num_epochs // 100)
+        if i % num_losses == 0:
             losses.append(loss)
             if add_del:
                 num_neurons.append(num_neuron)
