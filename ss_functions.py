@@ -12,6 +12,7 @@
 #   add_del_neurons_orig
 
 import numpy as np
+from scipy.signal import lfilter
 np.random.seed(42)
 
 
@@ -63,17 +64,17 @@ def add_neurons(parameters,losses,epsilon,max_hidden_size,tau,prob):
     if hidden_size >= max_hidden_size:
         return parameters
     
-    max_loss = np.max(losses)
+    #max_loss = np.max(losses)
     losses = losses[-tau:]  # keep only losses in window t-tau,...,t
-    upper = np.mean(losses) + epsilon*max_loss
-    lower = np.mean(losses) - epsilon*max_loss
+    upper = np.mean(losses) + epsilon#*max_loss
+    lower = np.mean(losses) - epsilon#*max_loss
     num_out_of_window = np.logical_or((losses < lower),(losses > upper))
     
     if (np.sum(num_out_of_window) == 0) and (np.random.rand() < prob):
         # if losses in window are too similar, add neuron with probability prob
-        new_W_in = np.random.randn(1,W_in.shape[1])
+        new_W_in = .01*np.random.randn(1,W_in.shape[1])
         new_b_in = np.zeros((1,1))
-        new_W_out = np.random.randn(W_out.shape[0],1)
+        new_W_out = .01*np.random.randn(W_out.shape[0],1)
         W_in = np.append(W_in, new_W_in, axis=0)
         b_in = np.append(b_in, new_b_in, axis=0)
         W_out = np.append(W_out, new_W_out, axis=1)    
@@ -149,25 +150,26 @@ def add_neurons_adam(parameters,m,v,losses,epsilon,max_hidden_size,tau,prob):
     if hidden_size >= max_hidden_size:
         return parameters,m,v
     
-    max_loss = np.max(losses)
-    losses = losses[-tau:]  # keep only losses in window t-tau,...,t
-    upper = np.mean(losses) + epsilon*max_loss
-    lower = np.mean(losses) - epsilon*max_loss
+    #max_loss = np.max(losses)
+    filt_losses = lfilter([1.0/4]*4,1,losses) # filter noise with FIR filter
+    losses = filt_losses[-tau:]  # keep only losses in window t-tau,...,t
+    upper = np.mean(losses) + epsilon#*max_loss
+    lower = np.mean(losses) - epsilon#*max_loss
     num_out_of_window = np.logical_or((losses < lower),(losses > upper))
     
     if (np.sum(num_out_of_window) == 0) and (np.random.rand() < prob):
         # if losses in window are too similar, add neuron with probability prob
-        W_in = np.append(W_in, np.random.randn(1,W_in.shape[1]), axis=0)
+        W_in = np.append(W_in, .01*np.random.randn(1,W_in.shape[1]), axis=0)
         b_in = np.append(b_in, np.zeros((1,1)), axis=0)
-        W_out = np.append(W_out, np.random.randn(W_out.shape[0],1), axis=1)
+        W_out = np.append(W_out, .01*np.random.randn(W_out.shape[0],1), axis=1)
         
-        mW_in = np.append(mW_in, .1*np.ones((1,W_in.shape[1])), axis=0)
-        mb_in = np.append(mb_in, .1*np.ones((1,1)), axis=0)
-        mW_out = np.append(mW_out, .1*np.ones((W_out.shape[0],1)), axis=1)
+        mW_in = np.append(mW_in, .01*np.ones((1,W_in.shape[1])), axis=0)
+        mb_in = np.append(mb_in, .01*np.ones((1,1)), axis=0)
+        mW_out = np.append(mW_out, .01*np.ones((W_out.shape[0],1)), axis=1)
 
-        vW_in = np.append(vW_in, .1*np.ones((1,W_in.shape[1])), axis=0)
-        vb_in = np.append(vb_in, .1*np.ones((1,1)), axis=0)
-        vW_out = np.append(vW_out, .1*np.ones((W_out.shape[0],1)), axis=1)        
+        vW_in = np.append(vW_in, .01*np.ones((1,W_in.shape[1])), axis=0)
+        vb_in = np.append(vb_in, .01*np.ones((1,1)), axis=0)
+        vW_out = np.append(vW_out, .01*np.ones((W_out.shape[0],1)), axis=1)        
     
     parameters['W'+str(l)] = W_in
     parameters['b'+str(l)] = b_in
@@ -184,8 +186,8 @@ def add_neurons_adam(parameters,m,v,losses,epsilon,max_hidden_size,tau,prob):
     return parameters,m,v
 
 
-def add_del_neurons_orig(parameters, print_add_del, itr, del_threshold, prob_del, 
-                    prob_add, max_hidden_size, num_below_margin):
+def add_del_neurons_orig(parameters, itr, del_threshold, prob_del, prob_add, 
+                         max_hidden_size, num_below_margin, print_add_del=False):
     """
     Original add_del_neurons function, closely follows Miconi
     Deletes and/or adds hidden layer neurons at the end of each epoch

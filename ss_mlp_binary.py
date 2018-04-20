@@ -15,8 +15,8 @@ from utils import *
 np.random.seed(2)
     
 def BinaryMLP(X, y, layer_dims, X_test=None, y_test=None, lr=0.01, num_iters=1000, 
-                  print_loss=True, add_del=False, print_add_del=False, 
-                  reg_param=0.,delta=0.01, prob=0.5, epsilon=0.01, max_hidden_size=100, tau=30):
+                  print_loss=True, add_del=False, reg_param=0., delta=0.03, prob=0.5, 
+                  epsilon=1e-5, max_hidden_size=100, tau=30):
                   #del_threshold=0.03, prob_del=0.05, prob_add=0.05, max_hidden_size=300, num_below_margin=5):
     
     parameters, losses, test_losses = \
@@ -26,14 +26,13 @@ def BinaryMLP(X, y, layer_dims, X_test=None, y_test=None, lr=0.01, num_iters=100
 
 def BinaryStochasticMLP(X, y, layer_dims, X_test=None, y_test=None, optimizer='sgd', 
                   lr=0.0007, batch_size=64, beta1=0.9, beta2=0.999, eps=1e-8, 
-                  num_epochs=10000, print_loss=True,
-                  add_del=False, print_add_del=False, reg_param=0.,
-                  delta=0.01, prob=0.5, epsilon=0.01, max_hidden_size=100, tau=30):
+                  num_epochs=10000, print_loss=True, add_del=False, reg_param=0.,
+                  delta=0.03, prob=.5, epsilon=.03, max_hidden_size=100, tau=30):
                   #del_threshold=0.03, prob_del=1., prob_add=1., max_hidden_size=300, num_below_margin=1):
     
     parameters, losses, test_losses = \
         StochasticMLP(X, y, layer_dims, 'binary', X_test, y_test, optimizer, lr, batch_size,
-                  beta1, beta2, eps, num_epochs, print_loss, add_del, print_add_del, reg_param,
+                  beta1, beta2, eps, num_epochs, print_loss, add_del, reg_param,
                   delta,prob,epsilon,max_hidden_size,tau)
     
     return parameters, losses, test_losses
@@ -86,7 +85,7 @@ if __name__ == '__main__':
     
     #X = np.random.rand(num_features,data_size)
     #y = np.random.randint(0,2,data_size).reshape(1,data_size)
-    X,y,x1,x2 = gen_data(size=data_size,var=0.1)
+    X,y,x1,x2 = gen_data(size=data_size,var=0.2)
     
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
     X_train = X_train.T
@@ -94,10 +93,10 @@ if __name__ == '__main__':
     y_train = y_train.T.reshape(1,-1)
     y_test = y_test.T.reshape(1,-1)
     
-    layer_dims = [X_train.shape[0], 10, 1]
-    num_iters = 1000
+    layer_dims = [X_train.shape[0], 1, 1]
+    num_iters = 5000
     lr = 0.1
-    bs = X_train.shape[1] // 16
+    bs = X_train.shape[1] / 16
     
 #    parameters,_,_ = BinaryMLP(X_train, y_train, layer_dims, X_test=X_test,
 #                               y_test=y_test, num_iters=num_iters, add_del=False, 
@@ -106,25 +105,25 @@ if __name__ == '__main__':
 #    print('test accuracy = %.3f' % score(X_test,y_test,parameters,'binary'))
 #    plot_model(parameters,x1,x2)
 
-    parameters,losses,_ = BinaryStochasticMLP(X_train, y_train, layer_dims, X_test=None, y_test=None, 
+    parameters,_,ad_loss = BinaryStochasticMLP(X_train, y_train, layer_dims, X_test=X_test, y_test=y_test, 
                                         num_epochs=num_iters, lr=lr, add_del=True, optimizer='adam', 
-                                        batch_size=bs, print_loss=True, print_add_del=False)
+                                        batch_size=bs, print_loss=True)
     print('train accuracy = %.3f' % score(X_train,y_train,parameters,'binary'))
     print('test accuracy = %.3f' % score(X_test,y_test,parameters,'binary'))
     plot_model(parameters,x1,x2)
     
-#    parameters,_,_ = BinaryStochasticMLP(X_train, y_train, layer_dims, X_test=X_test, y_test=y_test, 
-#                                       num_epochs=num_iters, lr=lr, add_del=True, optimizer='sgd', 
-#                                       batch_size=1000, print_loss=True, print_add_del=False)
-#    print('train accuracy = %.3f' % score(X_train,y_train,parameters,'binary'))
-#    print('test accuracy = %.3f' % score(X_test,y_test,parameters,'binary'))
-#
-#    xx = np.arange(1,num_iters+1)
-#    plt.plot(xx,ad_loss,color='blue',label='add/del')
-#    plt.plot(xx,reg_loss,color='red',label='regular')
-#    plt.legend(loc='upper right')
-#    plt.xlabel('iteration')
-#    plt.ylabel('loss')
-#    plt.title('Test Loss')
-#    plt.show()
+    parameters,_,reg_loss = BinaryStochasticMLP(X_train, y_train, layer_dims, X_test=X_test, y_test=y_test, 
+                                       num_epochs=num_iters, lr=lr, add_del=False, optimizer='adam', 
+                                       batch_size=bs, print_loss=True)
+    print('train accuracy = %.3f' % score(X_train,y_train,parameters,'binary'))
+    print('test accuracy = %.3f' % score(X_test,y_test,parameters,'binary'))
+
+    xx = np.arange(1,100+1)
+    plt.plot(xx,ad_loss,color='blue',label='add/del')
+    plt.plot(xx,reg_loss,color='red',label='regular')
+    plt.legend(loc='upper right')
+    plt.xlabel('iteration')
+    plt.ylabel('loss')
+    plt.title('Test Loss')
+    plt.show()
     

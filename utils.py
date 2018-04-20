@@ -440,15 +440,15 @@ def adam(parameters, grads, m, v, t, lr, beta1, beta2, epsilon, reg_param, data_
         # Moving average of the gradients
         m["dW" + str(l+1)] = beta1*m["dW" + str(l+1)] + (1-beta1)*grads['dW' + str(l+1)]
         m["db" + str(l+1)] = beta1*m["db" + str(l+1)] + (1-beta1)*grads['db' + str(l+1)]
-
+        #print np.all((m["dW" + str(l+1)] - grads['dW' + str(l+1)]) < 1e-5)
         # Compute bias-corrected first moment estimate
-        m_corrected["dW" + str(l+1)] = m["dW" + str(l+1)]#/(1-beta1**t)
-        m_corrected["db" + str(l+1)] = m["db" + str(l+1)]#/(1-beta1**t)
+        m_corrected["dW" + str(l+1)] = m["dW" + str(l+1)]/(1-beta1**t)
+        m_corrected["db" + str(l+1)] = m["db" + str(l+1)]/(1-beta1**t)
 
         # Moving average of the squared gradients
         v["dW" + str(l+1)] = beta2*v["dW" + str(l+1)] + (1-beta2)*np.power(grads['dW' + str(l+1)],2)
         v["db" + str(l+1)] = beta2*v["db" + str(l+1)] + (1-beta2)*np.power(grads['db' + str(l+1)],2)
-
+        #print np.all((v["dW" + str(l+1)] - grads['dW' + str(l+1)]) < 1e-5)
         # Compute bias-corrected second raw moment estimate
         v_corrected["dW" + str(l+1)] = v["dW" + str(l+1)]/(1-beta2**t)
         v_corrected["db" + str(l+1)] = v["db" + str(l+1)]/(1-beta2**t)
@@ -463,7 +463,7 @@ def adam(parameters, grads, m, v, t, lr, beta1, beta2, epsilon, reg_param, data_
     return parameters, m, v
 
 def MLP(X, y, layer_dims, problem_type, X_test, y_test, lr, num_iters, print_loss, add_del, 
-        print_add_del, reg_param, delta,prob,epsilon,max_hidden_size,tau):
+        reg_param, delta,prob,epsilon,max_hidden_size,tau):
         #del_threshold, prob_del, prob_add, max_hidden_size, num_below_margin):
     """
     Implements a L-layer multilayer perceptron (MLP)
@@ -560,7 +560,7 @@ def MLP(X, y, layer_dims, problem_type, X_test, y_test, lr, num_iters, print_los
     return parameters, losses, test_losses
 
 def StochasticMLP(X, y, layer_dims, problem_type, X_test, y_test, optimizer, lr, batch_size,
-                  beta1, beta2, eps, num_epochs, print_loss, add_del, print_add_del, reg_param,
+                  beta1, beta2, eps, num_epochs, print_loss, add_del, reg_param,
                   delta,prob,epsilon,max_hidden_size,tau):
                   #del_threshold, prob_del, prob_add, max_hidden_size, num_below_margin):
     """
