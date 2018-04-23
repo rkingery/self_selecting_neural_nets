@@ -4,6 +4,8 @@
 # Last Updated: April 2018
 # License: BSD 3 clause
 
+# TODO: lr finder, batch size increases, lr decay, autodiff
+
 # Functions contained:
 #   sigmoid
 #   tanh
@@ -32,7 +34,6 @@ from matplotlib import pyplot as plt
 from scipy.special import logsumexp
 from ss_functions import *
 np.random.seed(42)
-
 
 def sigmoid(Z):
     """
@@ -482,6 +483,7 @@ def MLP(X, y, layer_dims, problem_type, X_test, y_test, lr, num_iters, print_los
     """
     losses = []                         # keep track of loss for plotting
     test_losses = []
+    all_losses = []
     num_neurons = []
     
     # Parameters initialization.
@@ -503,19 +505,22 @@ def MLP(X, y, layer_dims, problem_type, X_test, y_test, lr, num_iters, print_los
         data_size = y.shape[1]
         parameters = gradient_descent(parameters, grads, lr, reg_param, data_size)
 
+        all_losses.append(loss)
+
         # Add / delete neurons
-        if add_del and i>tau:
-            #parameters = add_del_neurons_orig(parameters,print_add_del,i,del_threshold, 
-            #                             prob_del,prob_add,max_hidden_size,num_below_margin)
-            parameters = delete_neurons(parameters,delta,prob)
-            parameters = add_neurons(parameters,losses,epsilon,max_hidden_size,tau,prob)  
+        if add_del:
+            num_neuron = parameters['b1'].shape[0]
+            if i>tau:
+                #parameters = add_del_neurons_orig(parameters,print_add_del,i,del_threshold, 
+                #                             prob_del,prob_add,max_hidden_size,num_below_margin)
+                parameters = delete_neurons(parameters,delta,prob)
+                parameters = add_neurons(parameters,all_losses,epsilon,max_hidden_size,tau,prob)  
+                if parameters['b1'].shape[0] > num_neuron:
+                    epsilon /= 1
             
         if X_test is not None and y_test is not None:
             yhat_test,_ = forwardprop(X_test, parameters, problem_type)
             test_loss = compute_loss(yhat_test, y_test, parameters, reg_param, problem_type)
-
-        if add_del:
-            num_neuron = parameters['b1'].shape[0]
 
         # Print the cost every 100 training example
         num_prints = max(1,num_iters // 20)
@@ -526,9 +531,8 @@ def MLP(X, y, layer_dims, problem_type, X_test, y_test, lr, num_iters, print_los
             if X_test is not None and y_test is not None:
                 print ("Test loss after epoch %i: %f" %(i, test_loss))
                 
-        #num_losses = max(1,num_iters // 100)
-        #if i % num_losses == 0:
-        if True:
+        num_losses = 1#max(1,num_iters // 100)
+        if i % num_losses == 0:
             losses.append(loss)
             if add_del:
                 num_neurons.append(num_neuron)
@@ -541,9 +545,10 @@ def MLP(X, y, layer_dims, problem_type, X_test, y_test, lr, num_iters, print_los
             
     # plot the cost
     if print_loss:
-        plt.plot(losses,color='blue',label='train')
+        xx = np.linspace(1,num_iters+1,num=num_iters)
+        plt.plot(xx,losses,color='blue',label='train')
         if X_test is not None and y_test is not None:
-            plt.plot(test_losses,color='red',label='test')
+            plt.plot(xx,test_losses,color='red',label='test')
         plt.legend(loc='upper right')
         plt.ylabel('loss')
         plt.xlabel('iterations')
@@ -551,7 +556,8 @@ def MLP(X, y, layer_dims, problem_type, X_test, y_test, lr, num_iters, print_los
         plt.show()
         
     if add_del:
-        plt.plot(num_neurons,color='green',label='# neurons')
+        xx = np.linspace(1,num_iters+1,num=num_iters)
+        plt.plot(xx,num_neurons,color='green',label='# neurons')
         plt.ylabel('# neurons')
         plt.xlabel('epochs')
         plt.title('Number of neurons')
@@ -682,9 +688,10 @@ def StochasticMLP(X, y, layer_dims, problem_type, X_test, y_test, optimizer, lr,
                 
     # plot the cost
     if print_loss:
-        plt.plot(losses,color='blue',label='train')
+        xx = np.linspace(1,num_epochs+1,num=100)
+        plt.plot(xx,losses,color='blue',label='train')
         if X_test is not None and y_test is not None:
-            plt.plot(test_losses,color='red',label='test')
+            plt.plot(xx,test_losses,color='red',label='test')
         plt.legend(loc='upper right')
         plt.ylabel('loss')
         plt.xlabel('epochs')
@@ -692,7 +699,8 @@ def StochasticMLP(X, y, layer_dims, problem_type, X_test, y_test, optimizer, lr,
         plt.show()
         
     if add_del:
-        plt.plot(num_neurons,color='green',label='# neurons')
+        xx = np.linspace(1,num_epochs+1,num=100)
+        plt.plot(xx,num_neurons,color='green',label='# neurons')
         plt.ylabel('# neurons')
         plt.xlabel('epochs')
         plt.title('Number of neurons')

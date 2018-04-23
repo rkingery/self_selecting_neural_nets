@@ -65,7 +65,8 @@ def add_neurons(parameters,losses,epsilon,max_hidden_size,tau,prob):
         return parameters
     
     #max_loss = np.max(losses)
-    losses = losses[-tau:]  # keep only losses in window t-tau,...,t
+    filt_losses = lfilter([1.0/5]*5,1,losses) # filter noise with FIR filter
+    losses = filt_losses[-tau:]  # keep only losses in window t-tau,...,t
     upper = np.mean(losses) + epsilon#*max_loss
     lower = np.mean(losses) - epsilon#*max_loss
     num_out_of_window = np.logical_or((losses < lower),(losses > upper))
@@ -151,7 +152,7 @@ def add_neurons_adam(parameters,m,v,losses,epsilon,max_hidden_size,tau,prob):
         return parameters,m,v
     
     #max_loss = np.max(losses)
-    filt_losses = lfilter([1.0/4]*4,1,losses) # filter noise with FIR filter
+    filt_losses = lfilter([1.0/5]*5,1,losses) # filter noise with FIR filter
     losses = filt_losses[-tau:]  # keep only losses in window t-tau,...,t
     upper = np.mean(losses) + epsilon#*max_loss
     lower = np.mean(losses) - epsilon#*max_loss
