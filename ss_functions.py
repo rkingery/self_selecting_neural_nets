@@ -13,7 +13,7 @@
 
 import numpy as np
 from scipy.signal import lfilter
-np.random.seed(42)
+#np.random.seed(42)
 
 
 def delete_neurons(parameters,delta,prob):
@@ -28,11 +28,12 @@ def delete_neurons(parameters,delta,prob):
     hidden_size = W_out.shape[1]
     
     norms = np.sum(np.abs(W_out),axis=0)
+    max_out = np.max(norms)
     selected = (norms == norms) # initialize all True == keep all neurons
     
     for j in range(hidden_size):
         norm = norms[j]
-        if (norm < delta) and (np.random.rand() < prob):
+        if (norm < delta*max_out) and (np.random.rand() < prob):
             # remove neuron j with probability prob
             selected[j] = False
     
@@ -48,7 +49,7 @@ def delete_neurons(parameters,delta,prob):
     return parameters
 
 
-def add_neurons(parameters,losses,epsilon,max_hidden_size,tau,prob):
+def add_neurons(parameters,losses,epsilon,max_hidden_size,tau,prob,delta):
     """
     Add neuron to bottom of layer if loss is stalling
     """
@@ -64,18 +65,19 @@ def add_neurons(parameters,losses,epsilon,max_hidden_size,tau,prob):
     if hidden_size >= max_hidden_size:
         return parameters
     
-    #max_loss = np.max(losses)
+    max_loss = np.max(losses)
     filt_losses = lfilter([1.0/5]*5,1,losses) # filter noise with FIR filter
     losses = filt_losses[-tau:]  # keep only losses in window t-tau,...,t
-    upper = np.mean(losses) + epsilon#*max_loss
-    lower = np.mean(losses) - epsilon#*max_loss
+    upper = np.mean(losses) + epsilon*max_loss
+    lower = np.mean(losses) - epsilon*max_loss
     num_out_of_window = np.logical_or((losses < lower),(losses > upper))
     
     if (np.sum(num_out_of_window) == 0) and (np.random.rand() < prob):
         # if losses in window are too similar, add neuron with probability prob
-        new_W_in = .01*np.random.randn(1,W_in.shape[1])
+        delta = 0.1#3.*delta
+        new_W_in = np.random.normal(0,2.*delta,size=(1,W_in.shape[1]))
         new_b_in = np.zeros((1,1))
-        new_W_out = .01*np.random.randn(W_out.shape[0],1)
+        new_W_out = np.random.normal(0,2.*delta,size=(W_out.shape[0],1))
         W_in = np.append(W_in, new_W_in, axis=0)
         b_in = np.append(b_in, new_b_in, axis=0)
         W_out = np.append(W_out, new_W_out, axis=1)    

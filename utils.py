@@ -32,8 +32,9 @@
 import numpy as np
 from matplotlib import pyplot as plt
 from scipy.special import logsumexp
+from scipy.signal import lfilter
 from ss_functions import *
-np.random.seed(42)
+#np.random.seed(42)
 
 def sigmoid(Z):
     """
@@ -481,7 +482,7 @@ def MLP(X, y, layer_dims, problem_type, X_test, y_test, lr, num_iters, print_los
     Returns:
     parameters -- parameters learned by the model. They can then be used to predict.
     """
-    losses = []                         # keep track of loss for plotting
+    losses = []                
     test_losses = []
     all_losses = []
     num_neurons = []
@@ -514,7 +515,7 @@ def MLP(X, y, layer_dims, problem_type, X_test, y_test, lr, num_iters, print_los
                 #parameters = add_del_neurons_orig(parameters,print_add_del,i,del_threshold, 
                 #                             prob_del,prob_add,max_hidden_size,num_below_margin)
                 parameters = delete_neurons(parameters,delta,prob)
-                parameters = add_neurons(parameters,all_losses,epsilon,max_hidden_size,tau,prob)  
+                parameters = add_neurons(parameters,all_losses,epsilon,max_hidden_size,tau,prob,delta)  
                 if parameters['b1'].shape[0] > num_neuron:
                     epsilon /= 1
             
@@ -544,26 +545,27 @@ def MLP(X, y, layer_dims, problem_type, X_test, y_test, lr, num_iters, print_los
         #    print('learning rate reduced to %f' % lr)
             
     # plot the cost
-    if print_loss:
-        xx = np.linspace(1,num_iters+1,num=num_iters)
-        plt.plot(xx,losses,color='blue',label='train')
-        if X_test is not None and y_test is not None:
-            plt.plot(xx,test_losses,color='red',label='test')
-        plt.legend(loc='upper right')
-        plt.ylabel('loss')
-        plt.xlabel('iterations')
-        plt.title('Loss')
-        plt.show()
+#    if print_loss:
+#        xx = np.linspace(1,num_iters+1,num=num_iters)
+#        plt.plot(xx,losses,color='blue',label='train')
+#        if X_test is not None and y_test is not None:
+#            plt.plot(xx,test_losses,color='red',label='test')
+#        plt.legend(loc='upper right')
+#        plt.ylabel('loss')
+#        plt.xlabel('iterations')
+#        plt.title('Loss')
+#        plt.show()
+#        
+#    if add_del:
+#        filt_neurons = lfilter([1.0/50]*50,1,num_neurons)
+#        xx = np.linspace(1,num_iters+1,num=num_iters)
+#        plt.plot(xx,filt_neurons,color='green',label='# neurons')
+#        plt.ylabel('# neurons')
+#        plt.xlabel('epochs')
+#        plt.title('Number of neurons')
+#        plt.show()
         
-    if add_del:
-        xx = np.linspace(1,num_iters+1,num=num_iters)
-        plt.plot(xx,num_neurons,color='green',label='# neurons')
-        plt.ylabel('# neurons')
-        plt.xlabel('epochs')
-        plt.title('Number of neurons')
-        plt.show()
-        
-    return parameters, losses, test_losses
+    return parameters, losses, test_losses, num_neurons
 
 def StochasticMLP(X, y, layer_dims, problem_type, X_test, y_test, optimizer, lr, batch_size,
                   beta1, beta2, eps, num_epochs, print_loss, add_del, reg_param,
