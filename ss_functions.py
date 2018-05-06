@@ -12,6 +12,7 @@
 #   add_del_neurons_orig
 
 import numpy as np
+import torch
 from scipy.signal import lfilter
 #np.random.seed(42)
 
@@ -264,4 +265,80 @@ def add_del_neurons_orig(parameters, itr, del_threshold, prob_del, prob_add,
     parameters['W2'] = Why
     parameters['b1'] = bh
     #self.hidden_layer_sizes[0] = hidden_size
+    return parameters
+
+def delete_neurons_pytorch(model,delta,prob):
+    """
+    For PyTorch models, deletes neurons with small outgoing weights from layer
+    """
+    parameters = list(model.parameters())
+    
+    assert len(parameters) == 2+2, \
+    'self-selecting MLP only works with 1 hidden layer currently'
+    
+    W_out = parameters[2]    
+    hidden_size = W_out.shape[1]
+    
+    norms = torch.sum(torch.abs(W_out),dim=0)
+    max_out = torch.max(norms)
+    selected = (norms == norms) # initialize all True == keep all neurons
+    
+    for j in range(hidden_size):
+        norm = norms[j]
+        if (norm < delta*max_out) and (torch.rand(1) < prob):
+            # remove neuron j with probability prob
+            selected[j] = False
+    
+    if torch.sum(selected) == 0:
+        # don't want ALL neurons in layer deleted or training will crash
+        # keep neuron with largest outgoing weights if this occurs
+        selected[torch.argmax(norms)] = True
+                    
+    parameters[0] = parameters[0][selected,:]
+    parameters[1] = parameters[1][selected]
+    parameters[2] = parameters[2][:,selected]
+    
+    return model
+
+
+def add_neurons_pytorch(model,losses,epsilon,max_hidden_size,tau,prob,delta):
+    """
+    For PyTorch models, adds neuron to bottom of layer if loss is stalling
+    """
+    parameters = list(model.parameters())
+    
+    assert len(parameters) == 2+2, \
+    'self-selecting MLP only works with 1 hidden layer currently'
+    
+    W_in = parameters[0]
+    b_in = parameters[1]
+    W_out = parameters[2]    
+    hidden_size = b_in.shape[0]
+    
+    if hidden_size >= max_hidden_size:
+        return parameters
+    
+    max_loss = torch.max(losses)
+    filt_losses = lfilter([1.0/5]*5,1,losses) # filter noise with FIR filter
+    losses = filt_losses[-tau:]  # keep only losses in window t-tau,...,t
+    upper = torch.mean(losses) + epsilon*max_loss
+    lower = torch.mean(losses) - epsilon*max_loss
+    num_out_of_window = (losses < lower) or (losses > upper)
+    
+    if (torch.sum(num_out_of_window) == 0) and (torch.random.rand(1) < prob):
+        # if losses in window are too similar, add neuron with probability prob
+        delta = 0.1#3.*delta
+        ones = torch.ones(1,W_in.shape[1])
+        new_W_in = torch.normal(0,2.*delta*ones)
+        new_b_in = torch.zeros(1,1)
+        ones = torch.ones(W_out.shape[0],1)
+        new_W_out = torch.normal(0,2.*delta*ones)
+        W_in = torch.cat((W_in, new_W_in), dim=0)
+        b_in = torch.cat((b_in, new_b_in), dim=0)
+        W_out = torch.cat((W_out, new_W_out), dim=1)    
+    
+    parameters[0] = W_in
+    parameters[1] = b_in
+    parameters[2] = W_out
+    
     return parameters

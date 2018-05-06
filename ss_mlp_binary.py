@@ -68,7 +68,7 @@ def plot_model(parameters,x1,x2):
     yhat = predict(XX,parameters,'binary').reshape(xx.shape)
     
     f, ax = plt.subplots(figsize=(8, 6))
-    ax.contour(xx, yy, yhat, levels=[1.5])#, cmap="Greys", vmin=0, vmax=.6)
+    ax.contour(xx, yy, yhat, levels=[.5])#, cmap="Greys", vmin=0, vmax=.6)
     
     ax.scatter(x1[:,0],x1[:,1],marker='.',c='red',label='y=0')
     ax.scatter(x2[:,0],x2[:,1],marker='.',c='blue',label='y=1')
