@@ -1,3 +1,11 @@
+# PyTorch implementation of self-selecting MLP for binary classification
+# Author: Ryan Kingery (rkinger@g.clemson.edu)
+# Last Updated: May 2018
+# License: BSD 3 clause
+
+#!/usr/bin/env python2
+# -*- coding: utf-8 -*-
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -7,6 +15,7 @@ from torch.autograd import Variable
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.metrics import accuracy_score
+from ss_functions import *
 np.random.seed(2)
 torch.manual_seed(42)
 
@@ -94,28 +103,29 @@ def train(model,X,y,opt,criterion):
             #    param -= lr * param.grad
     return losses
 
-num_iters = 500
-num_samples = 1000
-num_features = 2
-num_hidden = 10
-num_classes = 1
-
-X,y,x1,x2 = gen_data(size=num_samples,var=0.01)
-X = torch.FloatTensor(X)
-y = torch.FloatTensor(y)#.reshape(-1,1))#.to(torch.int64)
-
-model = Model(num_features,num_hidden)
-loss = nn.BCELoss()
-lr = 0.1
-bs = X.shape[0]
-opt = optim.SGD(model.parameters(), lr=lr, momentum=0)
-#opt = optim.Adam(model.parameters(), lr=lr, betas=(0.9, 0.999))
-#scheduler = lr_scheduler.StepLR(opt, step_size=10000, gamma=0.1)
-
-losses = train(model,X,y,opt,loss)
-
-plt.plot(losses)
-plt.show()
-
-plot_model(model,x1,x2)
-print score(model,X,y)
+if __name__ == '__main__':
+    num_iters = 500
+    num_samples = 1000
+    num_features = 2
+    num_hidden = 10
+    num_classes = 1
+    
+    X,y,x1,x2 = gen_data(size=num_samples,var=0.01)
+    X = torch.FloatTensor(X)
+    y = torch.FloatTensor(y)#.reshape(-1,1))#.to(torch.int64)
+    
+    model = Model(num_features,num_hidden)
+    loss = nn.BCELoss()
+    lr = 0.1
+    bs = X.shape[0]
+    opt = optim.SGD(model.parameters(), lr=lr, momentum=0)
+    #opt = optim.Adam(model.parameters(), lr=lr, betas=(0.9, 0.999))
+    #scheduler = lr_scheduler.StepLR(opt, step_size=10000, gamma=0.1)
+    
+    losses = train(model,X,y,opt,loss)
+    
+    plt.plot(losses)
+    plt.show()
+    
+    plot_model(model,x1,x2)
+    print score(model,X,y)
