@@ -13,9 +13,102 @@ import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.metrics import accuracy_score
 from scipy.signal import lfilter
-from ss_functions import *
+import time
 np.random.seed(2)
 torch.manual_seed(42)
+
+def delete_neurons_pytorch(W1,b1,W2,b2,delta,prob):
+    """
+    For PyTorch models, deletes neurons with small outgoing weights from layer
+    
+    Arguments:
+    W1 -- weight matrix into hidden layer
+    b1 -- bias vector into hidden layer
+    W2 -- weight matrix into output layer
+    b2 -- bias vector into output layer
+    delta -- threshold for deletion of neurons
+    prob -- probability of a neuron below threshold being deleted
+    
+    Returns:
+    updated W1, b1, W2, b2
+    """
+    
+    W_out = W2   
+    hidden_size = W_out.shape[1]
+    
+    norms = torch.sum(torch.abs(W_out),dim=0)
+    max_out = torch.max(norms)
+    selected = (norms == norms) # initialize all True == keep all neurons
+    
+    for j in range(hidden_size):
+        norm = norms[j]
+        if (norm < delta*max_out) and (torch.rand(1) < prob):
+            # remove neuron j with probability prob
+            selected[j] = 0
+    
+    if torch.sum(selected) == 0:
+        # don't want ALL neurons in layer deleted or training will crash
+        # keep neuron with largest outgoing weights if this occurs
+        selected[torch.argmax(norms)] = 1
+             
+    W1 = W1[selected,:]
+    b1 = b1[selected,:]
+    W2 = W2[:,selected]
+        
+    return W1,b1,W2,b2
+
+
+def add_neurons_pytorch(W1,b1,W2,b2,losses,epsilon,delta,max_hidden_size,tau,prob):
+    """
+    For PyTorch models, adds neuron to bottom of layer if loss is stalling
+    
+    Arguments:
+    W1 -- weight matrix into hidden layer
+    b1 -- bias vector into hidden layer
+    W2 -- weight matrix into output layer
+    b2 -- bias vector into output layer
+    epsilon -- range loss function must deviate to not be flagged as stalling
+    delta -- threshold for deletion of neurons
+    max_hidden_size -- max size allowable for the hidden layer
+    tau -- window size to check for stalling in loss function
+    prob -- probability of a neuron below threshold being deleted
+    
+    Returns:
+    updated W1, b1, W2, b2
+    """
+    
+    W_in = W1
+    b_in = b1
+    W_out = W2   
+    hidden_size = W_out.shape[1]
+    losses = torch.FloatTensor(losses)
+    
+    if hidden_size >= max_hidden_size:
+        return W1,b1,W2,b2
+    
+    max_loss = torch.max(losses)
+    filt_losses = losses#lfilter([1.0/5]*5,1,losses) # filter noise with FIR filter
+    losses = filt_losses[-tau:]  # keep only losses in window t-tau,...,t
+    upper = torch.mean(losses) + epsilon*max_loss
+    lower = torch.mean(losses) - epsilon*max_loss
+    num_out_of_window = (losses < lower) + (losses > upper)
+
+    if (torch.sum(num_out_of_window).item() == 0) and (torch.rand(1) < prob):
+        # if losses in window are too similar, add neuron with probability prob
+        ones = torch.ones(1,W_in.shape[1])
+        new_W_in = torch.normal(0,2.*delta*ones)
+        new_b_in = torch.zeros(1,1)
+        ones = torch.ones(W_out.shape[0],1)
+        new_W_out = torch.normal(0,5.*delta*ones)
+        W_in = torch.cat((W_in, new_W_in), dim=0)
+        b_in = torch.cat((b_in, new_b_in), dim=0)
+        W_out = torch.cat((W_out, new_W_out), dim=1)    
+    
+    W1 = W_in
+    b1 = b_in
+    W2 = W_out
+    
+    return W1,b1,W2,b2
 
 def gen_data(size=1000,var=2.):
     centers = 5
@@ -192,7 +285,12 @@ if __name__ == '__main__':
     y = torch.FloatTensor(y).reshape(1,-1)
     
     layer_dims = [X.shape[0],num_hidden,1]
+    
+    tin = time.clock()
     losses,num_neurons = train(X,y,layer_dims,num_iters,lr=lr,add_del=True)
+    tout = time.clock()
+    tdiff = tout-tin
+    print('time = %f' % tdiff)
     
     losses = np.array(losses)
     filt_neurons = lfilter([1.0/50]*50,1,num_neurons)

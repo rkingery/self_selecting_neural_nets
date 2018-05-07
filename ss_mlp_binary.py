@@ -12,6 +12,7 @@ import pandas as pd
 from matplotlib import pyplot as plt
 from sklearn.model_selection import train_test_split
 from scipy.signal import lfilter
+import time
 from utils import *
 np.random.seed(2)
     
@@ -81,7 +82,7 @@ def plot_model(parameters,x1,x2):
 
 
 if __name__ == '__main__':
-    data_size = 5000
+    data_size = 1000
     num_features = 2
     
     #X = np.random.rand(num_features,data_size)
@@ -96,13 +97,17 @@ if __name__ == '__main__':
     
     layer_dims = [X_train.shape[0], 1, 1]
     num_iters = 10000
-    lr = 1.0
-    bs = X_train.shape[1] / 16
+    lr = 0.1
+    #bs = X_train.shape[1] / 16
     
+    tin = time.clock()
     parameters,_,ad_loss,num_neurons = \
         BinaryMLP(X_train, y_train, layer_dims, X_test=X_test,
                   y_test=y_test, num_iters=num_iters, add_del=True, 
                   print_loss=True, lr=lr)
+    tout = time.clock()
+    print('time = %f'% tout-tin)
+    
     print('training accuracy = %.3f' % score(X_train,y_train,parameters,'binary'))
     print('test accuracy = %.3f' % score(X_test,y_test,parameters,'binary'))
     plot_model(parameters,x1,x2)
