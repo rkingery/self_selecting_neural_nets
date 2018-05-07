@@ -50,7 +50,7 @@ def delete_neurons(parameters,delta,prob):
     return parameters
 
 
-def add_neurons(parameters,losses,epsilon,max_hidden_size,tau,prob,delta):
+def add_neurons(parameters,losses,epsilon,delta,max_hidden_size,tau,prob):
     """
     Add neuron to bottom of layer if loss is stalling
     """
@@ -267,16 +267,12 @@ def add_del_neurons_orig(parameters, itr, del_threshold, prob_del, prob_add,
     #self.hidden_layer_sizes[0] = hidden_size
     return parameters
 
-def delete_neurons_pytorch(model,delta,prob):
+def delete_neurons_pytorch(W1,b1,W2,b2,delta,prob):
     """
     For PyTorch models, deletes neurons with small outgoing weights from layer
     """
-    parameters = list(model.parameters())
     
-    assert len(parameters) == 2+2, \
-    'self-selecting MLP only works with 1 hidden layer currently'
-    
-    W_out = parameters[2]    
+    W_out = W2   
     hidden_size = W_out.shape[1]
     
     norms = torch.sum(torch.abs(W_out),dim=0)
@@ -287,58 +283,54 @@ def delete_neurons_pytorch(model,delta,prob):
         norm = norms[j]
         if (norm < delta*max_out) and (torch.rand(1) < prob):
             # remove neuron j with probability prob
-            selected[j] = False
+            selected[j] = 0
     
     if torch.sum(selected) == 0:
         # don't want ALL neurons in layer deleted or training will crash
         # keep neuron with largest outgoing weights if this occurs
-        selected[torch.argmax(norms)] = True
-                    
-    parameters[0] = parameters[0][selected,:]
-    parameters[1] = parameters[1][selected]
-    parameters[2] = parameters[2][:,selected]
-    
-    return model
+        selected[torch.argmax(norms)] = 1
+             
+    W1 = W1[selected,:]
+    b1 = b1[selected,:]
+    W2 = W2[:,selected]
+        
+    return W1,b1,W2,b2
 
 
-def add_neurons_pytorch(model,losses,epsilon,max_hidden_size,tau,prob,delta):
+def add_neurons_pytorch(W1,b1,W2,b2,losses,epsilon,delta,max_hidden_size,tau,prob):
     """
     For PyTorch models, adds neuron to bottom of layer if loss is stalling
     """
-    parameters = list(model.parameters())
     
-    assert len(parameters) == 2+2, \
-    'self-selecting MLP only works with 1 hidden layer currently'
-    
-    W_in = parameters[0]
-    b_in = parameters[1]
-    W_out = parameters[2]    
-    hidden_size = b_in.shape[0]
+    W_in = W1
+    b_in = b1
+    W_out = W2   
+    hidden_size = W_out.shape[1]
+    losses = torch.FloatTensor(losses)
     
     if hidden_size >= max_hidden_size:
-        return parameters
+        return W1,b1,W2,b2
     
     max_loss = torch.max(losses)
-    filt_losses = lfilter([1.0/5]*5,1,losses) # filter noise with FIR filter
+    filt_losses = losses#lfilter([1.0/5]*5,1,losses) # filter noise with FIR filter
     losses = filt_losses[-tau:]  # keep only losses in window t-tau,...,t
     upper = torch.mean(losses) + epsilon*max_loss
     lower = torch.mean(losses) - epsilon*max_loss
-    num_out_of_window = (losses < lower) or (losses > upper)
-    
-    if (torch.sum(num_out_of_window) == 0) and (torch.random.rand(1) < prob):
+    num_out_of_window = (losses < lower) + (losses > upper)
+    #print torch.sum(num_out_of_window).item()
+    if (torch.sum(num_out_of_window).item() == 0) and (torch.rand(1) < prob):
         # if losses in window are too similar, add neuron with probability prob
-        delta = 0.1#3.*delta
         ones = torch.ones(1,W_in.shape[1])
         new_W_in = torch.normal(0,2.*delta*ones)
         new_b_in = torch.zeros(1,1)
         ones = torch.ones(W_out.shape[0],1)
-        new_W_out = torch.normal(0,2.*delta*ones)
+        new_W_out = torch.normal(0,5.*delta*ones)
         W_in = torch.cat((W_in, new_W_in), dim=0)
         b_in = torch.cat((b_in, new_b_in), dim=0)
         W_out = torch.cat((W_out, new_W_out), dim=1)    
     
-    parameters[0] = W_in
-    parameters[1] = b_in
-    parameters[2] = W_out
+    W1 = W_in
+    b1 = b_in
+    W2 = W_out
     
-    return parameters
+    return W1,b1,W2,b2

@@ -60,20 +60,20 @@ def plot_model(model,x1,x2):
     ax.legend(loc='upper right')
     plt.show()
 
-class Model(nn.Module):    
-    def __init__(self,num_features,num_hidden=1):
-        super(Model,self).__init__()
-        self.fc1 = nn.Linear(num_features, num_hidden)
-        self.relu1 = nn.ReLU()
-        self.fc2 = nn.Linear(num_hidden, 1)
-        self.out = nn.Sigmoid()
-        
-    def forward(self, x):
-        x = self.fc1(x)
-        x = self.relu1(x)
-        x = self.fc2(x)
-        yhat = self.out(x)
-        return yhat
+#class Model(nn.Module):    
+#    def __init__(self,num_features,num_hidden=1):
+#        super(Model,self).__init__()
+#        self.fc1 = nn.Linear(num_features, num_hidden)
+#        self.relu1 = nn.ReLU()
+#        self.fc2 = nn.Linear(num_hidden, 1)
+#        self.out = nn.Sigmoid()
+#        
+#    def forward(self, x):
+#        x = self.fc1(x)
+#        x = self.relu1(x)
+#        x = self.fc2(x)
+#        yhat = self.out(x)
+#        return yhat
 
 def score(model,X,y):
     yhat = model(X)
@@ -87,45 +87,120 @@ def score(model,X,y):
     acc = accuracy_score(y,pred)
     return acc
 
-def train(model,X,y,opt,criterion):
+def init_add_del():
+    delta = 0.01
+    prob = 1.
+    epsilon = 1e-5
+    max_hidden_size = 100
+    tau = 50
+    return delta,prob,epsilon,max_hidden_size,tau
+
+#def train(model,X,y,lr,add_del=False):
+#    delta,prob,epsilon,max_hidden_size,tau = init_add_del()
+#    losses = []
+#    num_neurons = []
+#    #opt = optim.SGD(model.parameters(), lr=lr, momentum=0)
+#    criterion = nn.BCELoss()
+#    for t in range(num_iters):
+#        #opt.zero_grad()
+#        yhat = model(X)
+#        loss = criterion(yhat,y)
+#        losses.append(loss)
+#        loss.backward()
+#        with torch.no_grad():
+#            #opt.step()
+#            for param in model.parameters():
+#                param -= lr * param.grad
+#            if add_del and t>=tau:
+#                model = delete_neurons_pytorch(model,delta,prob)
+#                #model = add_neurons_pytorch(model,losses,epsilon,max_hidden_size,
+#                #                            tau,prob,delta)
+#            num_neurons.append(model.fc1.out_features)
+#        if t % max(1,num_iters // 20) == 0:
+#            print('loss after iteration %i: %f' % (t, losses[-1]))
+#            if add_del:
+#                print('# neurons after iteration %i: %d' % (t, num_neurons[-1]))
+#    return losses,num_neurons
+
+def train(X,y,layer_dims,num_iters,lr=0.01,add_del=False):
+    dtype = torch.float
+    #device = torch.device("cpu")
+    sigmoid = lambda z : 1./(1+torch.exp(-z))
+    
+    din,dh,dout = tuple(layer_dims)
+    m = X.shape[1]
+    delta,prob,epsilon,max_hidden_size,tau = init_add_del()
     losses = []
+    num_neurons = []
+    
+    W1 = torch.randn(dh, din, dtype=dtype, requires_grad=False)
+    b1 = torch.randn(dh, 1, dtype=dtype, requires_grad=False)
+    W2 = torch.randn(dout, dh, dtype=dtype, requires_grad=False)
+    b2 = torch.randn(dout, 1, dtype=dtype, requires_grad=False)
+    
     for t in range(num_iters):
-        yhat = model(X)
+        # Forwardprop
+        Z1 = torch.mm(W1,X)+b1
+        A = Z1.clamp(min=0) # relu
+        Z2 = torch.mm(W2,A)+b2
+        yhat = sigmoid(Z2).clamp(1e-6,1.-1e-6)
+    
+        criterion = nn.BCELoss()
         loss = criterion(yhat,y)
+        loss = loss.squeeze_().item()
         losses.append(loss)
+    
+        # Backprop
+        dyhat = -(torch.div(y,yhat) - torch.div(1-y, 1-yhat))
+        dZ2 = dyhat*sigmoid(Z2)*(1-sigmoid(Z2))
+        dW2 = 1./m*torch.mm(dZ2,A.t())
+        db2 = 1./m*torch.sum(dZ2,1,keepdim=True)
+        dA = torch.mm(W2.t(),dZ2)
+        dZ1 = dA
+        dZ1[Z1 < 0] = 0
+        dW1 = 1./m*torch.mm(dZ1,X.t())
+        db1 = 1./m*torch.sum(dZ1,1,keepdim=True)
+    
+        # gradient descent
+        W1 -= lr*dW1
+        b1 -= lr*db1
+        W2 -= lr*dW2
+        b2 -= lr*db2
+
+        if add_del and t>tau:
+            W1,b1,W2,b2 = delete_neurons_pytorch(W1,b1,W2,b2,delta,prob)
+            W1,b1,W2,b2 = add_neurons_pytorch(W1,b1,W2,b2,losses,epsilon,
+                                                  delta,max_hidden_size,tau,prob)
+        num_neurons.append(b1.shape[0])
+
         if t % max(1,num_iters // 20) == 0:
-            print t, loss.item()
-        model.zero_grad()
-        loss.backward()
-        with torch.no_grad():
-            opt.step()
-            #for param in model.parameters():
-            #    param -= lr * param.grad
-    return losses
+            print('loss after iteration %i: %f' % (t, losses[-1]))
+            if add_del:
+                print('# neurons after iteration %i: %d' % (t, num_neurons[-1]))
+    
+    return losses,num_neurons
+
 
 if __name__ == '__main__':
-    num_iters = 500
+    num_iters = 10000
     num_samples = 1000
     num_features = 2
-    num_hidden = 10
+    num_hidden = 1
     num_classes = 1
+    lr = 0.1
     
     X,y,x1,x2 = gen_data(size=num_samples,var=0.01)
-    X = torch.FloatTensor(X)
-    y = torch.FloatTensor(y)#.reshape(-1,1))#.to(torch.int64)
+    X = torch.FloatTensor(X).t()
+    y = torch.FloatTensor(y).reshape(1,-1)
     
-    model = Model(num_features,num_hidden)
-    loss = nn.BCELoss()
-    lr = 0.1
-    bs = X.shape[0]
-    opt = optim.SGD(model.parameters(), lr=lr, momentum=0)
-    #opt = optim.Adam(model.parameters(), lr=lr, betas=(0.9, 0.999))
-    #scheduler = lr_scheduler.StepLR(opt, step_size=10000, gamma=0.1)
-    
-    losses = train(model,X,y,opt,loss)
+    layer_dims = [X.shape[0],num_hidden,1]
+    losses,num_neurons = train(X,y,layer_dims,num_iters,lr=lr,add_del=True)
     
     plt.plot(losses)
     plt.show()
     
-    plot_model(model,x1,x2)
-    print score(model,X,y)
+    #plt.plot(num_neurons)
+    #plt.show()    
+    
+    #plot_model(model,x1,x2)
+    #print score(model,X,y)

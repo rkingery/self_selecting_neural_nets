@@ -515,9 +515,8 @@ def MLP(X, y, layer_dims, problem_type, X_test, y_test, lr, num_iters, print_los
                 #parameters = add_del_neurons_orig(parameters,print_add_del,i,del_threshold, 
                 #                             prob_del,prob_add,max_hidden_size,num_below_margin)
                 parameters = delete_neurons(parameters,delta,prob)
-                parameters = add_neurons(parameters,all_losses,epsilon,max_hidden_size,tau,prob,delta)  
-                if parameters['b1'].shape[0] > num_neuron:
-                    epsilon /= 1
+                parameters = add_neurons(parameters,all_losses,epsilon,delta,
+                                         max_hidden_size,tau,prob)
             
         if X_test is not None and y_test is not None:
             yhat_test,_ = forwardprop(X_test, parameters, problem_type)
@@ -649,7 +648,8 @@ def StochasticMLP(X, y, layer_dims, problem_type, X_test, y_test, optimizer, lr,
                 #parameters = add_del_neurons_orig(parameters,print_add_del,i,del_threshold, 
                 #                         prob_del,prob_add,max_hidden_size,num_below_margin)
                 parameters = delete_neurons(parameters,delta,prob)
-                parameters = add_neurons(parameters,all_losses,epsilon,max_hidden_size,tau,prob)                
+                parameters = add_neurons(parameters,all_losses,epsilon,delta,
+                                         max_hidden_size,tau,prob)                
             if optimizer == 'adam':
                 parameters,m,v = delete_neurons_adam(parameters,m,v,delta,prob)
                 parameters,m,v = add_neurons_adam(parameters,m,v,all_losses,epsilon,max_hidden_size,tau,prob)
