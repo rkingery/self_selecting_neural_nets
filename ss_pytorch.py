@@ -3,9 +3,6 @@
 # Last Updated: May 2018
 # License: BSD 3 clause
 
-#!/usr/bin/env python2
-# -*- coding: utf-8 -*-
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -15,6 +12,7 @@ from torch.autograd import Variable
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.metrics import accuracy_score
+from scipy.signal import lfilter
 from ss_functions import *
 np.random.seed(2)
 torch.manual_seed(42)
@@ -196,11 +194,16 @@ if __name__ == '__main__':
     layer_dims = [X.shape[0],num_hidden,1]
     losses,num_neurons = train(X,y,layer_dims,num_iters,lr=lr,add_del=True)
     
-    plt.plot(losses)
+    losses = np.array(losses)
+    filt_neurons = lfilter([1.0/50]*50,1,num_neurons)
+    
+    plt.plot(losses,color='blue')
+    plt.title('Loss')
     plt.show()
     
-    #plt.plot(num_neurons)
-    #plt.show()    
+    plt.plot(filt_neurons,color='green')
+    plt.title('# Neurons')
+    plt.show()    
     
     #plot_model(model,x1,x2)
     #print score(model,X,y)
