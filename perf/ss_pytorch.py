@@ -18,7 +18,7 @@ from torch.autograd import Variable
 from ss_perf_utils import *
 
 np.random.seed(2)
-torch.manual_seed(42)
+torch.manual_seed(2)
 
 global device,dtype
 #device = torch.device('cuda:0')
@@ -33,9 +33,6 @@ def train_pytorch(X,y,layer_dims,num_iters,lr=0.01,add_del=False):
     delta,prob,epsilon,max_hidden_size,tau = init_add_del()
     losses = []
     num_neurons = []
-    
-    #X = X.cuda()
-    #y = y.cuda()
     
     W1 = torch.randn(dh, din, dtype=dtype, requires_grad=False, device=device)
     b1 = torch.randn(dh, 1, dtype=dtype, requires_grad=False, device=device)
@@ -86,7 +83,7 @@ def train_pytorch(X,y,layer_dims,num_iters,lr=0.01,add_del=False):
 
 
 if __name__ == '__main__':
-    num_iters = 1000
+    num_iters = 10000
     num_samples = 1000
     num_features = 2
     num_hidden = 1

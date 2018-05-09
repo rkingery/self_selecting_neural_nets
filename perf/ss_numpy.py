@@ -67,14 +67,23 @@ def train_numpy(X,y,layer_dims,num_iters,lr=0.01,add_del=False):
     
     return losses,num_neurons
 
-
-if __name__ == '__main__':
+def init_hparams():
     num_iters = 10000
     num_samples = 1000
     num_features = 2
     num_hidden = 1
     num_classes = 1
     lr = 0.1
+    return num_iters,num_samples,num_features,num_hidden,num_classes,lr
+
+if __name__ == '__main__':
+#    num_iters = 10000
+#    num_samples = 1000
+#    num_features = 2
+#    num_hidden = 1
+#    num_classes = 1
+#    lr = 0.1
+    num_iters,num_samples,num_features,num_hidden,num_classes,lr = init_hparams()
     layer_dims = [num_features,num_hidden,num_classes]
     
     X,y,x1,x2 = gen_data(samples=num_samples,var=0.01)
