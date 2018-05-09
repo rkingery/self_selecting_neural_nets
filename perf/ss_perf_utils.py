@@ -225,7 +225,7 @@ def gen_data(samples=1000,var=2.):
 
 def init_add_del():
     delta = 0.01
-    prob = 1.
+    prob = 1.0
     epsilon = 1e-5
     max_hidden_size = 100
     tau = 50
