@@ -1,3 +1,4 @@
-perf/.ipynb_checkpoints
+.ipynb_checkpoints/
+perf/.ipynb_checkpoints/
 */.ipynb_checkpoints/*
 
