@@ -231,15 +231,6 @@ def init_add_del():
     tau = 50
     return delta,prob,epsilon,max_hidden_size,tau
 
-def init_hparams():
-    num_iters = 10000
-    num_samples = 1000
-    num_features = 2
-    num_hidden = 1
-    num_classes = 1
-    lr = 0.1
-    return num_iters,num_samples,num_features,num_hidden,num_classes,lr
-
 #def plot_model(model,x1,x2):
 #    xx, yy = np.mgrid[-3.5:3.5:.01, -3.5:3.5:.01]
 #    XX = np.c_[xx.ravel(), yy.ravel()]
