@@ -12,7 +12,7 @@ from ss_perf_utils import *
 
 np.random.seed(2)
 
-def train(X,y,layer_dims,num_iters,lr=0.01,add_del=False):
+def train_numpy(X,y,layer_dims,num_iters,lr=0.01,add_del=False):
     sigmoid = lambda z : 1./(1+np.exp(-z))
     
     din,dh,dout = tuple(layer_dims)
@@ -82,7 +82,7 @@ if __name__ == '__main__':
     y = y.reshape(1,-1)
     
     tin = time.clock()
-    losses,num_neurons = train(X,y,layer_dims,num_iters,lr=lr,add_del=True)
+    losses,num_neurons = train_numpy(X,y,layer_dims,num_iters,lr=lr,add_del=True)
     tout = time.clock()
     tdiff = tout-tin
     print('time = %f' % tdiff)

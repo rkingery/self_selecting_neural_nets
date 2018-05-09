@@ -25,7 +25,7 @@ global device,dtype
 device = torch.device('cpu')
 dtype = torch.float
 
-def train(X,y,layer_dims,num_iters,lr=0.01,add_del=False):
+def train_pytorch(X,y,layer_dims,num_iters,lr=0.01,add_del=False):
     sigmoid = lambda z : 1./(1+torch.exp(-z))
     
     din,dh,dout = tuple(layer_dims)
@@ -99,13 +99,14 @@ if __name__ == '__main__':
     y = torch.tensor(y,device=device,dtype=dtype).reshape(1,-1)
     
     tin = time.clock()
-    losses,num_neurons = train(X,y,layer_dims,num_iters,lr=lr,add_del=True)
+    losses,num_neurons = train_pytorch(X,y,layer_dims,num_iters,lr=lr,add_del=True)
     tout = time.clock()
     tdiff = tout-tin
     print('time = %f' % tdiff)
     
     losses = np.array(losses)
     filt_neurons = lfilter([1.0/50]*50,1,num_neurons)
+    filt_neurons[filt_neurons<1] = num_hidden
     
     plt.plot(losses,color='blue')
     plt.title('Loss')
