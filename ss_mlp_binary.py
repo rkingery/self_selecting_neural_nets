@@ -106,7 +106,8 @@ if __name__ == '__main__':
                   y_test=y_test, num_iters=num_iters, add_del=True, 
                   print_loss=True, lr=lr)
     tout = time.clock()
-    print('time = %f'% tout-tin)
+    tdiff = tout-tin
+    print('time = %f'% tdiff)
     
     print('training accuracy = %.3f' % score(X_train,y_train,parameters,'binary'))
     print('test accuracy = %.3f' % score(X_test,y_test,parameters,'binary'))
